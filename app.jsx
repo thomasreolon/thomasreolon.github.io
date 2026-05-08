@@ -99,7 +99,18 @@ function tokens(theme) {
     return {
       bg: '#0e0c1a',
       heading: '#f4ebe2',
-      titleHero: '#a89aa2',           // greyer hero title
+      titleHero: '#f0eae0',
+      // Stacked extrusion shadow + electric-blue atmospheric glow.
+      titleHeroShadow: [
+        '1px 1px 0 #2c2640',
+        '2px 2px 0 #221d34',
+        '3px 3px 0 '+'#181428',
+        '4px 4px 0 #100c1c',
+        '5px 6px 16px rgba(0,0,0,0.55)',
+        '0 0 18px rgba(150,200,255,0.55)',
+        '0 0 38px rgba(110,170,255,0.30)',
+      ].join(', '),
+      titleHeroFilter: 'drop-shadow(0 0 22px rgba(120,180,255,0.35))',
       body: '#d8cec4',
       muted: '#9a8e88',
       mono: '#b8aea4',
@@ -112,7 +123,17 @@ function tokens(theme) {
   return {
     bg: '#f4d8b8',
     heading: '#2a1a14',
-    titleHero: '#a89890',             // greyer hero title in light too
+    titleHero: '#1a0e08',
+    // Stacked extrusion shadow in warm browns + amber atmospheric glow.
+    titleHeroShadow: [
+      '1px 1px 0 #5c3a26',
+      '2px 2px 0 #7e5236',
+      '3px 3px 0 #a06a44',
+      '4px 4px 0 '+'#bc8254',
+      '5px 6px 14px rgba(50,20,10,0.40)',
+      '0 0 24px rgba(255,170,90,0.40)',
+    ].join(', '),
+    titleHeroFilter: 'drop-shadow(0 0 18px rgba(255,170,90,0.30))',
     body: '#2a1a14',
     muted: '#5a4438',
     mono: '#5a4438',
@@ -271,7 +292,7 @@ function ProjectsMenu({ T }) {
 }
 
 // ---------- Hero with exploding letters ----------
-function SplitLetters({ text, color }) {
+function SplitLetters({ text, color, shadow, filter }) {
   const chars = [...text];
   return (
     <span aria-label={text}>
@@ -279,7 +300,7 @@ function SplitLetters({ text, color }) {
         <span
           key={i}
           className="hero-letter inline-block"
-          style={{ whiteSpace: 'pre', color }}
+          style={{ whiteSpace: 'pre', color, textShadow: shadow, filter }}
         >
           {ch === ' ' ? '\u00A0' : ch}
         </span>
@@ -341,8 +362,8 @@ function Hero({ T }) {
           className="font-display text-[18vw] md:text-[16vw] leading-[0.85] tracking-tight select-none"
           style={{ wordSpacing: '0.05em' }}
         >
-          <div className="block"><SplitLetters text="THOMAS" color={T.titleHero} /></div>
-          <div className="block"><SplitLetters text="REOLON" color={T.titleHero} /></div>
+          <div className="block"><SplitLetters text="THOMAS" color={T.titleHero} shadow={T.titleHeroShadow} filter={T.titleHeroFilter} /></div>
+          <div className="block"><SplitLetters text="REOLON" color={T.titleHero} shadow={T.titleHeroShadow} filter={T.titleHeroFilter} /></div>
         </h1>
         <p
           className="mt-12 max-w-xl text-xl md:text-2xl leading-relaxed"
@@ -357,7 +378,7 @@ function Hero({ T }) {
         style={{ color: T.muted }}
       >
         <span style={{ color: '#ffffff' }}>Scroll to wander</span>
-        <span className="font-mono">↓</span>
+        <span className="font-mono" style={{ color: '#ffffff' }}>↓</span>
       </footer>
     </section>
   );
@@ -516,45 +537,59 @@ function Contact({ T }) {
       data-screen-label="05 Contact"
       className="min-h-screen px-6 md:px-16 pt-32 pb-12 flex flex-col"
     >
-      <div className="flex-1 flex flex-col justify-center items-center text-center w-full">
-        <Card T={T} className="w-full max-w-2xl">
-          <div className="flex justify-center"><ChapterMarker index={4} label="Contact" T={T} /></div>
-          <div className="mt-8 grid gap-6">
-            {[
-              ['Email', 'thomas.reolon.it@gmail.com', 'mailto:thomas.reolon.it@gmail.com'],
-              ['LinkedIn', 'in/thomas-reolon-9270971a3', 'https://www.linkedin.com/in/thomas-reolon-9270971a3'],
-            ].map(([l, v, href]) => (
-              <a
-                key={l}
-                href={href}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-xl px-6 py-5 transition hover:scale-[1.01] active:scale-[0.99]"
-                style={{
-                  background: T.cardBg,
-                  border: '1px solid ' + T.cardBorder,
-                  color: T.heading,
-                }}
-              >
-                <div className="font-mono text-[11px] uppercase tracking-[0.3em] mb-1" style={{ color: T.muted }}>{l}</div>
-                <div className="font-display text-base md:text-lg break-all">{v}</div>
-              </a>
-            ))}
-          </div>
-        </Card>
+      <div className="flex-1 flex flex-col justify-start items-center text-center w-full">
+        <div
+          className="flex items-center gap-5 text-[13px] tracking-[0.3em] uppercase"
+          style={{ color: '#ffffff', textShadow: '0 1px 6px rgba(0,0,0,0.45)' }}
+        >
+          <span className="font-mono">Ch. 04</span>
+          <span className="h-px w-16" style={{ background: '#ffffff', opacity: 0.55 }} />
+          <span>Contact</span>
+        </div>
+        <p
+          className="mt-10 max-w-md font-display text-2xl md:text-3xl leading-snug"
+          style={{ color: '#ffffff', textShadow: '0 1px 10px rgba(0,0,0,0.50)' }}
+        >
+          Approach the altar.
+        </p>
+        <p
+          className="mt-4 max-w-md text-base leading-relaxed"
+          style={{ color: '#ffffff', textShadow: '0 1px 6px rgba(0,0,0,0.50)' }}
+        >
+          Hover the runes on the stele to wake them — tap one to send a message.
+        </p>
       </div>
       <footer
         className="flex justify-between items-end text-[12px] tracking-[0.32em] uppercase mt-12"
         style={{ color: T.muted }}
       >
-        <span>© 2026 Thomas Reolon</span>
-        <span className="font-mono">Built quietly</span>
+        <span style={{ color: '#ffffff' }}>© 2026 Thomas Reolon</span>
+        <span className="relative group font-mono cursor-help select-none">
+          CREDITS
+          <span
+            className="absolute bottom-full right-0 mb-2 w-[320px] rounded-lg px-3 py-2 text-[11px] normal-case tracking-normal leading-relaxed opacity-0 pointer-events-none transition-opacity duration-200 group-hover:opacity-100"
+            style={{
+              background: T.cardBg,
+              border: '1px solid ' + T.cardBorder,
+              color: 'white',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+          >
+            Rock by Danni Bittman [CC-BY] via Poly Pizza
+            <br />
+            Torii Gate by Hattie Stroud [CC-BY] via Poly Pizza
+            <br />
+            Statue by Zsky [CC-BY] via Poly Pizza
+          </span>
+        </span>
       </footer>
     </section>
   );
 }
 
 function App() {
+  const SCENE_ONLY_REVIEW = false;
   const [tweaks, setTweak] = useTweaks();
   const T = tokens(tweaks.theme);
   const canvasRef = useRef(null);
@@ -566,6 +601,13 @@ function App() {
     document.body.style.background = T.bg;
   }, [tweaks.theme]);
 
+  // The moon rune on the altar dispatches this event when clicked.
+  useEffect(() => {
+    const onToggle = () => setTweak('theme', tweaks.theme === 'dark' ? 'light' : 'dark');
+    window.addEventListener('altar-theme-toggle', onToggle);
+    return () => window.removeEventListener('altar-theme-toggle', onToggle);
+  }, [tweaks.theme]);
+
   const inner = (
     <>
       <canvas
@@ -573,11 +615,13 @@ function App() {
         className="fixed inset-0 w-full h-full pointer-events-none"
         style={{ zIndex: 0 }}
       />
+      <>
       <header
         className="fixed top-0 left-0 right-0 px-6 md:px-16 py-6 flex justify-between items-center"
         style={{
           zIndex: 30,
-          // background: tweaks.theme === 'dark' ? 'rgba(10,8,18,0.20)' : 'rgba(244,216,184,0.20)',
+          opacity: SCENE_ONLY_REVIEW ? 0 : 1,
+          pointerEvents: SCENE_ONLY_REVIEW ? 'none' : 'auto',
         }}
       >
         <span
@@ -599,13 +643,14 @@ function App() {
           <ProjectsMenu T={T} />
         </div>
       </header>
-      <main className="relative" style={{ zIndex: 1 }}>
+      <main className="relative" style={{ zIndex: 1, opacity: SCENE_ONLY_REVIEW ? 0 : 1, pointerEvents: SCENE_ONLY_REVIEW ? 'none' : 'auto' }}>
         <Hero T={T} />
         <RealEstate T={T} />
         <Finance T={T} />
         <AISection T={T} />
         <Contact T={T} />
       </main>
+      </>
     </>
   );
 
@@ -635,7 +680,7 @@ function App() {
       ) : (
         inner
       )}
-      <TweaksPanel tweaks={tweaks} setTweak={setTweak} theme={tweaks.theme} />
+      {!SCENE_ONLY_REVIEW && <TweaksPanel tweaks={tweaks} setTweak={setTweak} theme={tweaks.theme} />}
     </>
   );
 }

@@ -24,7 +24,6 @@ window.createScene = function (canvas) {
     };
   }
   const rand = mulberry32(20260507);
-  const settleOffset = (z) => (z < -165 && z > -220 ? -0.18 : 0);
 
   function terrainHeight(x, z) {
     return (
@@ -33,6 +32,14 @@ window.createScene = function (canvas) {
       Math.sin((x + z) * 0.04) * 0.6 +
       Math.cos(x * 0.03 - z * 0.025) * 1.0 - 0.4
     );
+  }
+
+  // Mirrors the road falloff applied when building the terrain mesh — use this for object placement
+  // so things sit on the actual carved ground rather than the un-flattened analytical surface.
+  function groundY(x, z) {
+    const h = terrainHeight(x, z);
+    const roadFalloff = clamp01(1 - Math.abs(x) / 5);
+    return lerp(h, -0.05, roadFalloff * 0.85);
   }
 
   // Day & night sky stops
@@ -206,8 +213,8 @@ window.createScene = function (canvas) {
         new THREE.MeshStandardMaterial({ color: 0x3a2218, flatShading: true })
       );
       const x = side * 2.6;
-      const baseY = terrainHeight(x, z + 180);
-      post.position.set(x, baseY + 1.1 + settleOffset(z), z);
+      const baseY = groundY(x, z + 180);
+      post.position.set(x, baseY + 1.1, z);
       lanterns.add(post);
       const lamp = new THREE.Mesh(
         new THREE.IcosahedronGeometry(0.22, 0),
@@ -215,7 +222,7 @@ window.createScene = function (canvas) {
           color: 0xffe2a0, emissive: 0xffb060, emissiveIntensity: 0, flatShading: true,
         })
       );
-      lamp.position.set(x, baseY + 2.3 + settleOffset(z), z);
+      lamp.position.set(x, baseY + 2.3, z);
       lamp.userData.isLamp = true;
       lanterns.add(lamp);
     }
@@ -272,7 +279,7 @@ window.createScene = function (canvas) {
     for (const side of [-1, 1]) {
       if (rand() < 0.16) continue;
       const x = side * (3.4 + rand() * 6.5);
-      const y = terrainHeight(x, z + 180) + settleOffset(z);
+      const y = groundY(x, z + 180);
       const tree = makeBlossomTree(treeSeed++);
       tree.position.set(x, y, z);
       tree.scale.setScalar(0.85 + rand() * 0.55);
@@ -284,7 +291,7 @@ window.createScene = function (canvas) {
     for (const side of [-1, 1]) {
       if (rand() < 0.4) continue;
       const x = side * (10 + rand() * 16);
-      const y = terrainHeight(x, z + 180) + settleOffset(z);
+      const y = groundY(x, z + 180);
       const tree = makeBlossomTree(treeSeed++);
       tree.position.set(x, y, z);
       tree.scale.setScalar(0.7 + rand() * 0.5);
@@ -312,7 +319,7 @@ window.createScene = function (canvas) {
     if (rand() < 0.5) continue;
     const side = rand() < 0.5 ? -1 : 1;
     const x = side * (2.6 + rand() * 8);
-    const y = terrainHeight(x, z + 180) + settleOffset(z);
+    const y = groundY(x, z + 180);
     const bush = new THREE.Group();
     const cnt = 2 + Math.floor(rand() * 3);
     for (let i = 0; i < cnt; i++) {
@@ -342,7 +349,7 @@ window.createScene = function (canvas) {
     const z = 14 - rand() * 360;
     let x = (rand() - 0.5) * 50;
     if (Math.abs(x) < 2.4) x = (x < 0 ? -1 : 1) * (2.4 + rand() * 1.5);
-    const y = terrainHeight(x, z + 180) + settleOffset(z);
+    const y = groundY(x, z + 180);
     const s = 0.3 + rand() * 1.2;
     dummy.position.set(x, y, z);
     dummy.rotation.set(rand() * Math.PI, rand() * Math.PI, rand() * Math.PI);
@@ -391,48 +398,263 @@ window.createScene = function (canvas) {
     mountains.add(mesh);
   });
 
-  // Small crack exactly at camera-path entry on first mountain.
-  const crackMat = new THREE.MeshStandardMaterial({ color: 0x21141b, roughness: 1, metalness: 0, flatShading: true });
-  const crack = new THREE.Group();
-  const crackParts = [
-    { x: 0.05, y: 3.4, z: -214.3, sx: 0.22, sy: 2.6, sz: 0.24, rz: 0.10 },
-    { x: -0.24, y: 2.5, z: -214.0, sx: 0.16, sy: 1.35, sz: 0.18, rz: -0.26 },
-    { x: 0.26, y: 2.6, z: -214.0, sx: 0.16, sy: 1.30, sz: 0.18, rz: 0.24 },
-  ];
-  crackParts.forEach(({ x, y, z, sx, sy, sz, rz }) => {
-    const p = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), crackMat);
-    p.position.set(x, y, z);
-    p.scale.set(sx, sy, sz);
-    p.rotation.x = -0.2;
-    p.rotation.z = rz;
-    crack.add(p);
-  });
-  mountains.add(crack);
-
-  // Faint white glow from inside the crack.
-  const crackGlow = new THREE.PointLight(0xf5f5ff, 1.2, 16, 2);
-  crackGlow.position.set(0.02, 3.1, -214.1);
-  scene.add(crackGlow);
-
-  // Valley altar: two rocks before the last mountain plus surrounding lights.
-  const altarZ = -236;
-  const altarX = 0.2;
-  const altarY = terrainHeight(altarX, altarZ + 180);
+  // Valley altar at the end of the road — two flanking boulders, a stone platform,
+  // and a stele bearing interactive icons that link out to contact destinations.
+  const altarZ = -250;
+  const altarX = 0;
+  const altarY = -0.18;
   const altarGroup = new THREE.Group();
-  const altarMat = new THREE.MeshStandardMaterial({ color: 0x8a6c60, flatShading: true, roughness: 1, metalness: 0 });
-  [
-    { x: -0.8, y: 0.52, z: 0.1, sx: 1.05, sy: 1.35, sz: 0.95, ry: 0.4 },
-    { x: 0.75, y: 0.46, z: -0.05, sx: 0.95, sy: 1.2, sz: 1.05, ry: -0.3 },
-  ].forEach(({ x, y, z, sx, sy, sz, ry }) => {
-    const r = new THREE.Mesh(new THREE.IcosahedronGeometry(0.62, 0), altarMat);
-    r.position.set(x, y, z);
-    r.scale.set(sx, sy, sz);
-    r.rotation.y = ry;
-    altarGroup.add(r);
-  });
   altarGroup.position.set(altarX, altarY, altarZ);
   scene.add(altarGroup);
 
+  // Ground a free-standing group whose contents are positioned with their bottom near local y=0.
+  function groundFreeGroup(group, worldX, worldZ, yOffset = 0) {
+    group.position.set(worldX, 0, worldZ);
+    group.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(group);
+    const targetY = groundY(worldX, worldZ + 180);
+    group.position.y = targetY - box.min.y + yOffset;
+  }
+
+  // Two flanking sharp rocks loaded from SharpRock.glb. The second is rotated differently so
+  // it reads as a sibling rather than a mirror duplicate.
+  const sharpRockLoader = new GLTFLoader();
+  sharpRockLoader.load('/uploads/SharpRock.glb', (gltf) => {
+    const proto = gltf.scene;
+    proto.traverse((obj) => {
+      if (!obj.isMesh || !obj.material) return;
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      mats.forEach((mat) => {
+        if (mat.color) mat.color.lerp(new THREE.Color(0x6e4d3f), 0.20);
+        if ('roughness' in mat) mat.roughness = 1;
+        if ('metalness' in mat) mat.metalness = 0;
+      });
+    });
+
+    const left = proto.clone(true);
+    left.scale.setScalar(0.010);
+    left.rotation.set(0.0, 0.55, 0.0);
+    groundFreeGroup(left, altarX - 3.7, altarZ + 0.3, -0.844);
+    scene.add(left);
+
+    const right = proto.clone(true);
+    right.scale.setScalar(0.0086);
+    right.rotation.set(0.0, -1.85, 0.18);
+    groundFreeGroup(right, altarX + 3.7, altarZ - 0.15, -0.907);
+    scene.add(right);
+  }, undefined, (err) => console.warn('Failed to load SharpRock.glb', err));
+
+  // Wider rock platform between the boulders.
+  const altarPlatformMat = new THREE.MeshStandardMaterial({ color: 0x7a6058, flatShading: true, roughness: 1 });
+  const altarPlatform = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 2.05, 0.8, 8), altarPlatformMat);
+  altarPlatform.position.set(0, 0.4, 0);
+  altarPlatform.rotation.y = 0.3;
+  altarGroup.add(altarPlatform);
+
+  // Tall stele standing on the platform (intentionally irregular, hand-carved look).
+  const STELE_W = 1.75, STELE_H = 4.0, STELE_D = 0.7;
+  const STELE_BASE_Y = 0.8;
+  const STELE_TOP_R = STELE_W * 0.42;
+  const STELE_BOT_R = STELE_W * 0.58;
+  const steleMat = new THREE.MeshStandardMaterial({ color: 0x8b7066, flatShading: true, roughness: 1 });
+  const steleGeo = new THREE.CylinderGeometry(STELE_TOP_R, STELE_BOT_R, STELE_H, 8, 2);
+  const sp = steleGeo.attributes.position;
+  for (let i = 0; i < sp.count; i++) {
+    const y = sp.getY(i);
+    const n = Math.sin(y * 1.4 + i * 0.5) * 0.05;
+    const m = Math.cos(y * 0.9 + i * 0.4) * 0.035;
+    sp.setX(i, sp.getX(i) + n);
+    sp.setZ(i, sp.getZ(i) + m);
+  }
+  steleGeo.computeVertexNormals();
+  const stele = new THREE.Mesh(steleGeo, steleMat);
+  stele.position.set(0, STELE_BASE_Y + STELE_H / 2, 0);
+  stele.rotation.y = 0.17;
+  altarGroup.add(stele);
+
+  // Carved cap stone giving the stele a distinct crown silhouette.
+  const steleCap = new THREE.Mesh(
+    new THREE.CylinderGeometry(STELE_W * 0.48, STELE_W * 0.42, 0.26, 8),
+    new THREE.MeshStandardMaterial({ color: 0x6e564a, flatShading: true, roughness: 1 })
+  );
+  steleCap.position.set(0, STELE_BASE_Y + STELE_H + 0.13, 0);
+  steleCap.rotation.y = 0.17;
+  altarGroup.add(steleCap);
+
+  // Soft fill light near the stele so the runes stay readable at night.
+  const altarFill = new THREE.PointLight(0xffe2bf, 1.2, 10, 2);
+  altarFill.position.set(0, 2.7, 1.4);
+  altarGroup.add(altarFill);
+
+  // Cylinder radius at any altar-local y — needed so runes sit just outside the actual stele
+  // surface (its tapered cylinder) instead of being buried inside it.
+  function steleRadiusAt(y) {
+    const stelLocalY = y - (STELE_BASE_Y + STELE_H / 2);
+    const fraction = clamp01((stelLocalY + STELE_H / 2) / STELE_H);
+    return lerp(STELE_BOT_R, STELE_TOP_R, fraction);
+  }
+
+  // Rune-like interactive marks: a dark carved recess plate with a glowing accent-coloured
+  // symbol on top. Symbol fill uses the rune's accent so it actually emits visible colour.
+  const recessCv = document.createElement('canvas'); recessCv.width = recessCv.height = 128;
+  const rCtx = recessCv.getContext('2d');
+  const rGrad = rCtx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  rGrad.addColorStop(0,   'rgba(155, 115, 90, 0.78)');
+  rGrad.addColorStop(0.55,'rgba(120,  88, 68, 0.48)');
+  rGrad.addColorStop(1,   'rgba(80,  55, 40, 0.0)');
+  rCtx.fillStyle = rGrad; rCtx.fillRect(0, 0, 128, 128);
+  const recessTex = new THREE.CanvasTexture(recessCv);
+  recessTex.colorSpace = THREE.SRGBColorSpace;
+  const recessMat = new THREE.MeshStandardMaterial({ map: recessTex, roughness: 1, metalness: 0, transparent: true, depthWrite: false });
+  function makeIconTexture(symbol, accent) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 256;
+    const ctx = cv.getContext('2d');
+    ctx.clearRect(0, 0, 256, 256);
+    ctx.font = 'bold 190px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // Wide halo
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 44;
+    ctx.lineWidth = 26;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = accent;
+    ctx.strokeText(symbol, 128, 140);
+    // Sharp coloured core
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = accent;
+    ctx.fillText(symbol, 128, 140);
+    // Bright highlight on top so the rune still reads against bright sky
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = 0.85;
+    ctx.font = 'bold 160px Georgia, serif';
+    ctx.fillText(symbol, 128, 140);
+    ctx.globalAlpha = 1;
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    return tex;
+  }
+
+  function makeMoonTexture(accent) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 256;
+    const ctx = cv.getContext('2d');
+    ctx.clearRect(0, 0, 256, 256);
+    // Build the crescent on an offscreen canvas first.
+    const off = document.createElement('canvas');
+    off.width = off.height = 256;
+    const oc = off.getContext('2d');
+    oc.fillStyle = '#ffffff';
+    oc.beginPath();
+    oc.arc(118, 132, 78, 0, Math.PI * 2);
+    oc.fill();
+    oc.globalCompositeOperation = 'destination-out';
+    oc.beginPath();
+    oc.arc(160, 116, 70, 0, Math.PI * 2);
+    oc.fill();
+    // Composite onto main canvas with glow halo, then sharper on top.
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 38;
+    ctx.drawImage(off, 0, 0);
+    ctx.shadowBlur = 14;
+    ctx.drawImage(off, 0, 0);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    return tex;
+  }
+
+  const interactiveIcons = [];
+
+  // Two main rune planes — sized large with bright accent fill so they read clearly.
+  [
+    { sym: '@',  y: 3.10, link: 'mailto:thomas.reolon.it@gmail.com',                 emissive: 0xffd5a8, accent: '#ffd5a8', label: 'Email' },
+    { sym: 'in', y: 2.05, link: 'https://www.linkedin.com/in/thomas-reolon-9270971a3', emissive: 0x9ec0ff, accent: '#9ec0ff', label: 'LinkedIn' },
+  ].forEach(({ sym, y, link, emissive, accent, label }) => {
+    const frontZ = steleRadiusAt(y) + 0.03;
+    const recess = new THREE.Mesh(new THREE.CircleGeometry(0.5, 24), recessMat);
+    recess.position.set(0, y, frontZ - 0.012);
+    altarGroup.add(recess);
+
+    const tex = makeIconTexture(sym, accent);
+    const dCv = document.createElement('canvas'); dCv.width = dCv.height = 256;
+    const dCtx = dCv.getContext('2d');
+    dCtx.clearRect(0, 0, 256, 256);
+    dCtx.font = 'bold 190px Georgia, serif';
+    dCtx.textAlign = 'center'; dCtx.textBaseline = 'middle';
+    dCtx.fillStyle = 'rgba(20,12,8,0.72)'; dCtx.fillText(sym, 128, 140);
+    const darkTex = new THREE.CanvasTexture(dCv);
+    darkTex.colorSpace = THREE.SRGBColorSpace; darkTex.anisotropy = 4;
+    const mat = new THREE.MeshStandardMaterial({
+      map: darkTex,
+      emissiveMap: tex,
+      emissive: new THREE.Color(emissive),
+      emissiveIntensity: 0,
+      roughness: 1,
+      transparent: true,
+      alphaTest: 0.04,
+      depthWrite: false,
+    });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.92, 0.92), mat);
+    mesh.position.set(0, y, frontZ);
+    mesh.userData = {
+      isAltarIcon: true,
+      link,
+      label,
+      baseEmissive: 0,
+      hoverEmissive: 3.6,
+    };
+    altarGroup.add(mesh);
+    interactiveIcons.push(mesh);
+  });
+
+  // Smaller crescent moon in the upper-right of the stele — clicking it toggles theme.
+  {
+    const moonY = 3.95;
+    const moonX = 0.45;
+    const frontZ = steleRadiusAt(moonY) + 0.03;
+    const recess = new THREE.Mesh(new THREE.CircleGeometry(0.28, 24), recessMat);
+    recess.position.set(moonX, moonY, frontZ - 0.012);
+    altarGroup.add(recess);
+
+    const tex = makeMoonTexture('#dde6ff');
+    const mDCv = document.createElement('canvas'); mDCv.width = mDCv.height = 256;
+    const mDCtx = mDCv.getContext('2d');
+    mDCtx.clearRect(0, 0, 256, 256);
+    mDCtx.fillStyle = 'rgba(18,12,10,0.68)';
+    mDCtx.beginPath(); mDCtx.arc(118, 132, 78, 0, Math.PI * 2); mDCtx.fill();
+    mDCtx.globalCompositeOperation = 'destination-out';
+    mDCtx.beginPath(); mDCtx.arc(160, 116, 70, 0, Math.PI * 2); mDCtx.fill();
+    const darkMoonTex = new THREE.CanvasTexture(mDCv);
+    darkMoonTex.colorSpace = THREE.SRGBColorSpace; darkMoonTex.anisotropy = 4;
+    const mat = new THREE.MeshStandardMaterial({
+      map: darkMoonTex,
+      emissiveMap: tex,
+      emissive: new THREE.Color(0xc8d4ff),
+      emissiveIntensity: 0,
+      roughness: 1,
+      transparent: true,
+      alphaTest: 0.04,
+      depthWrite: false,
+    });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.5), mat);
+    mesh.position.set(moonX, moonY, frontZ);
+    mesh.userData = {
+      isAltarIcon: true,
+      action: 'toggleTheme',
+      label: 'Toggle theme',
+      baseEmissive: 0,
+      hoverEmissive: 3.6,
+    };
+    altarGroup.add(mesh);
+    interactiveIcons.push(mesh);
+  }
+
+  // Surrounding lamps & glows around the altar.
   const altarLights = new THREE.Group();
   const altarLampMat = new THREE.MeshStandardMaterial({
     color: 0xffe6bf, emissive: 0xffd6a0, emissiveIntensity: 1.5, flatShading: true, roughness: 1,
@@ -440,16 +662,209 @@ window.createScene = function (canvas) {
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * Math.PI * 2;
     const rx = altarX + Math.cos(a) * 3.2;
-    const rz = altarZ + Math.sin(a) * 2.2;
-    const ry = terrainHeight(rx, rz + 180);
+    const rz = altarZ + Math.sin(a) * 2.1;
+    const ry = groundY(rx, rz + 180);
     const lamp = new THREE.Mesh(new THREE.IcosahedronGeometry(0.16, 0), altarLampMat);
     lamp.position.set(rx, ry + 0.42, rz);
     altarLights.add(lamp);
-    const glow = new THREE.PointLight(0xffd5a8, 0.55, 7, 2);
+    const glow = new THREE.PointLight(0xffd5a8, 0.55, 8, 2);
     glow.position.set(rx, ry + 0.55, rz);
     altarLights.add(glow);
   }
   scene.add(altarLights);
+
+  // Crystals — emissive shards on the ground around the altar and emerging from the mountain.
+  const crystalMats = [];
+  function makeCrystal(color, h, baseIntensity = 1.6) {
+    const geo = new THREE.OctahedronGeometry(h * 0.5, 0);
+    geo.scale(0.55, 1.8, 0.55);
+    const mat = new THREE.MeshStandardMaterial({
+      color,
+      emissive: new THREE.Color(color),
+      emissiveIntensity: baseIntensity,
+      flatShading: true,
+      roughness: 0.3,
+      metalness: 0.1,
+      transparent: true,
+      opacity: 0.88,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mat.userData.baseIntensity = baseIntensity;
+    crystalMats.push(mat);
+    return mesh;
+  }
+
+  // Hero crystal clusters — two bouquets framing the altar at the screen borders. Each cluster
+  // has one dominant central shard plus 8–11 secondary shards fanning out asymmetrically with
+  // a cyan/blue body and a subtle violet accent. The base appears fused at the ground.
+  function makeCrystalCluster(primary, accent, dominantHeight, secondaryCount, baseIntensity, style = 'fan') {
+    const g = new THREE.Group();
+    const cPrimary = new THREE.Color(primary);
+    const cAccent = new THREE.Color(accent);
+    const cWhite = new THREE.Color(0xffffff);
+    function addShard(h, colorChoice, posX, posY, posZ, leanX, leanZ, intensity, slender = 1) {
+      const colorBody = colorChoice.clone();
+      // Tint a few shards toward white for high-contrast facets.
+      if (rand() < 0.22) colorBody.lerp(cWhite, 0.30);
+      const geo = new THREE.OctahedronGeometry(h * 0.21, 0);
+      const baseXZ = (0.44 + rand() * 0.20) * slender;
+      geo.scale(baseXZ, 2.0 + rand() * 0.9, baseXZ);
+      const mat = new THREE.MeshStandardMaterial({
+        color: colorBody,
+        emissive: colorChoice,
+        emissiveIntensity: intensity,
+        flatShading: true,
+        roughness: 0.26,
+        metalness: 0.08,
+        transparent: true,
+        opacity: 0.92,
+      });
+      mat.userData.baseIntensity = intensity;
+      crystalMats.push(mat);
+      const shard = new THREE.Mesh(geo, mat);
+      shard.position.set(posX, posY, posZ);
+      shard.rotation.set(leanX, rand() * Math.PI * 2, leanZ);
+      g.add(shard);
+    }
+    const isSpear = style === 'spear';
+    const isRose = style === 'rose';
+    // Dominant central shard — stands tallest, slight lean.
+    addShard(
+      dominantHeight,
+      cPrimary,
+      (rand() - 0.5) * 0.12,
+      dominantHeight * 0.46,
+      (rand() - 0.5) * 0.12,
+      (rand() - 0.5) * (isSpear ? 0.05 : isRose ? 0.08 : 0.12),
+      (rand() - 0.5) * (isSpear ? 0.05 : isRose ? 0.08 : 0.12),
+      baseIntensity * (isSpear ? 1.18 : isRose ? 1.12 : 1.05),
+      isSpear ? 0.72 : isRose ? 0.82 : 1.0,
+    );
+    if (isRose) {
+      // Rose-like crystal bloom: layered petals around a bud.
+      const layers = [
+        { count: 6, r: 0.26, hMul: 0.52, lean: 0.36 },
+        { count: 8, r: 0.44, hMul: 0.45, lean: 0.52 },
+        { count: 9, r: 0.62, hMul: 0.38, lean: 0.64 },
+      ];
+      layers.forEach(({ count, r, hMul, lean }, layerIdx) => {
+        const phase = rand() * Math.PI * 2;
+        for (let i = 0; i < count; i++) {
+          const a = phase + (i / count) * Math.PI * 2;
+          const jitterR = r + (rand() - 0.5) * 0.08;
+          const h = dominantHeight * (hMul + rand() * 0.2);
+          const colorChoice = (i + layerIdx) % 4 === 0 ? cAccent : cPrimary;
+          addShard(
+            h,
+            colorChoice,
+            Math.cos(a) * jitterR,
+            h * (0.32 + layerIdx * 0.02),
+            Math.sin(a) * jitterR,
+            Math.sin(a) * lean,
+            -Math.cos(a) * lean,
+            baseIntensity * (0.78 + rand() * 0.35),
+            0.78,
+          );
+        }
+      });
+      // small outer petals
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2 + rand() * 0.25;
+        const h = dominantHeight * (0.34 + rand() * 0.16);
+        addShard(
+          h,
+          cPrimary,
+          Math.cos(a) * 0.82,
+          h * 0.22,
+          Math.sin(a) * 0.82,
+          Math.sin(a) * 0.7,
+          -Math.cos(a) * 0.7,
+          baseIntensity * 0.72,
+          0.86,
+        );
+      }
+      return g;
+    }
+    // Asymmetric fan: right crystal can switch to a tighter spear bouquet.
+    const fanCenter = rand() * Math.PI * 2;
+    const fanWidth = isSpear ? Math.PI * 1.15 : Math.PI * 1.55;
+    for (let i = 0; i < secondaryCount; i++) {
+      const t = (i + rand() * 0.5) / secondaryCount;
+      const angle = fanCenter + (t - 0.5) * fanWidth + (rand() - 0.5) * 0.35;
+      const radius = isSpear ? (0.12 + rand() * 0.42) : (0.18 + rand() * 0.62);
+      const h = dominantHeight * (isSpear ? (0.5 + rand() * 0.55) : (0.34 + rand() * 0.52));
+      const useAccent = rand() < 0.30;
+      addShard(
+        h,
+        useAccent ? cAccent : cPrimary,
+        Math.cos(angle) * radius,
+        h * 0.42 + rand() * 0.08,
+        Math.sin(angle) * radius,
+        Math.sin(angle) * (isSpear ? (0.11 + rand() * 0.20) : (0.18 + rand() * 0.30)) + (rand() - 0.5) * 0.14,
+        -Math.cos(angle) * (isSpear ? (0.11 + rand() * 0.20) : (0.18 + rand() * 0.30)) + (rand() - 0.5) * 0.14,
+        baseIntensity * (isSpear ? (0.86 + rand() * 0.48) : (0.7 + rand() * 0.45)),
+        isSpear ? 0.78 : 1.0,
+      );
+    }
+    if (isSpear) {
+      // Add two extra rear guard spikes to complete the crystal silhouette.
+      [-0.28, 0.26].forEach((off) => {
+        addShard(
+          dominantHeight * (0.62 + rand() * 0.18),
+          cPrimary,
+          off,
+          dominantHeight * (0.30 + rand() * 0.07),
+          -0.15 - rand() * 0.16,
+          0.08 + rand() * 0.12,
+          (off < 0 ? -1 : 1) * (0.1 + rand() * 0.12),
+          baseIntensity * 0.95,
+          0.74,
+        );
+      });
+    }
+    return g;
+  }
+
+  // Two clusters — left larger and richer in violet; right smaller and bluer. Positioned at
+  // screen borders, well off the centre lane so they frame the altar.
+  [
+    { dx: -5.9, dz:  2.3, h: 3.2, primary: 0x3aa6ff, accent: 0x9a6cff, n: 11, li: 2.4, style: 'fan' },
+    { dx:  6.6, dz: -2.4, h: 2.7, primary: 0x6cc4ff, accent: 0xb088ff, n: 10, li: 1.9, style: 'rose' },
+  ].forEach(({ dx, dz, h, primary, accent, n, li, style }) => {
+    const wx = altarX + dx;
+    const wz = altarZ + dz;
+    const wy = groundY(wx, wz + 180);
+    const cluster = makeCrystalCluster(primary, accent, h, n, 2.7, style);
+    cluster.position.set(wx, wy + 0.06, wz);
+    cluster.rotation.y = rand() * Math.PI * 2;
+    scene.add(cluster);
+    const pl = new THREE.PointLight(primary, li, 16, 2);
+    pl.position.set(wx, wy + h * 0.72, wz);
+    scene.add(pl);
+    const plAccent = new THREE.PointLight(accent, li * 0.45, 12, 2);
+    plAccent.position.set(wx + 0.4, wy + h * 0.45, wz - 0.4);
+    scene.add(plAccent);
+  });
+
+  // Mountain crystals — emerging from the cone face above the altar.
+  [
+    { x: -1.4, y: 0.7, z: -221.3, h: 0.55, c: 0x9aa8ff, rx:  0.3, rz:  0.4 },
+    { x:  1.6, y: 1.5, z: -221.2, h: 0.70, c: 0xb088ff, rx: -0.2, rz: -0.3 },
+    { x: -2.6, y: 2.4, z: -222.0, h: 0.60, c: 0x88c8ff, rx:  0.4, rz:  0.6 },
+    { x:  2.8, y: 0.5, z: -221.7, h: 0.45, c: 0xffa8d8, rx: -0.1, rz: -0.5 },
+    { x: -0.9, y: 3.1, z: -222.4, h: 0.55, c: 0xa8c8ff, rx:  0.2, rz:  0.2 },
+    { x:  1.0, y: 2.8, z: -221.6, h: 0.50, c: 0xd0a8ff, rx: -0.3, rz:  0.3 },
+    { x: -2.1, y: 0.4, z: -221.5, h: 0.40, c: 0x9adcff, rx:  0.1, rz:  0.7 },
+    { x:  3.4, y: 1.8, z: -222.2, h: 0.50, c: 0xc4a4ff, rx: -0.4, rz: -0.2 },
+  ].forEach(({ x, y, z, h, c, rx, rz }) => {
+    const mesh = makeCrystal(c, h, 1.9);
+    mesh.position.set(x, y, z);
+    mesh.rotation.set(rx, rand() * Math.PI * 2, rz);
+    mountains.add(mesh);
+    const pl = new THREE.PointLight(c, 0.45, 5, 2);
+    pl.position.set(x, y, z + 0.3);
+    scene.add(pl);
+  });
 
   scene.add(mountains);
 
@@ -458,7 +873,7 @@ window.createScene = function (canvas) {
   // Rocks: scattered along the path
   const TORII_Z   = [-184, -196]; // 2 gates close to the mountain/road convergence
   const GATE_SCALE   = 16;      // 20% smaller than previous size 20
-  const GATE_X_OFFSET = 0.9;    // slightly right of the road centerline
+  const GATE_X_OFFSET = 0.1;    // slightly right of the road centerline
   const STATUE_SCALE = 2.52;   // 1.4x bigger than previous 1.8
   const ROCK_SCALE   = 2.0;  // adjust if model appears too big/small
 
@@ -481,7 +896,7 @@ window.createScene = function (canvas) {
         const gate = proto.clone(true);
         gate.scale.setScalar(GATE_SCALE);
         gate.rotation.y = Math.PI / 4; // 45° anti-clockwise
-        placeModelOnGround(gate, GATE_X_OFFSET, tz, terrainHeight(GATE_X_OFFSET, tz + 180), -0.3);
+        placeModelOnGround(gate, GATE_X_OFFSET, tz, groundY(GATE_X_OFFSET, tz + 180), -0.05);
         scene.add(gate);
       });
     })
@@ -510,7 +925,7 @@ window.createScene = function (canvas) {
               if (mat.needsUpdate !== undefined) mat.needsUpdate = true;
             });
           });
-          placeModelOnGround(statue, sx, tz + 0.5, terrainHeight(sx, tz + 180), -0.22);
+          placeModelOnGround(statue, sx, tz + 0.5, groundY(sx, tz + 180), -0.05);
           scene.add(statue);
         });
       });
@@ -530,13 +945,54 @@ window.createScene = function (canvas) {
         const scl = ROCK_SCALE * (0.6 + (i % 4) * 0.25);
         rock.scale.setScalar(scl);
         rock.rotation.y = i * 1.37;
-        placeModelOnGround(rock, rx, rz, terrainHeight(rx, rz + 180));
+        placeModelOnGround(rock, rx, rz, groundY(rx, rz + 180));
         scene.add(rock);
       });
     })
     .catch((err) => {
       console.warn('Failed to load Rock.glb', err);
     });
+
+  // Grass patches, bell flowers, and tulips around the altar base — kept off the road.
+  function scatterAltarPlants(url, offsets, scaleBase, scaleVar, yOffset = -0.04) {
+    loadGLB(url)
+      .then((proto) => {
+        offsets.forEach(([dx, dz], i) => {
+          // Road half-width is 1.8 — leave a comfortable buffer so nothing lands on the lane.
+          if (Math.abs(dx) < 2.0) return;
+          const m = proto.clone(true);
+          const jitter = (rand() - 0.5) * 0.12;
+          m.scale.setScalar(scaleBase + (i % 3) * scaleVar + jitter);
+          m.rotation.y = rand() * Math.PI * 2;
+          const wx = altarX + dx;
+          const wz = altarZ + dz;
+          placeModelOnGround(m, wx, wz, groundY(wx, wz + 180), yOffset);
+          scene.add(m);
+        });
+      })
+      .catch((err) => console.warn('Failed to load ' + url, err));
+  }
+
+  scatterAltarPlants('/uploads/GrassPatch.glb', [
+    // Keep center path visually open; denser side/back clusters.
+    [-3.2, 0.6], [-2.8, 1.8], [-3.5, -0.9], [-2.4, -1.8],
+    [3.2, 0.7], [2.7, 1.9], [3.4, -0.8], [2.5, -1.7],
+    [-1.9, 2.5], [1.9, 2.5], [-2.2, -2.4], [2.2, -2.3],
+    [-4.6, 2.2], [4.5, 2.1], [-4.4, -2.1], [4.4, -2.0],
+    [-2.3, 3.4], [2.4, 3.3], [-2.4, -3.3], [2.5, -3.2],
+  ], 0.5, 0.1, -0.08);
+
+  scatterAltarPlants('/uploads/BellFlower.glb', [
+    [-2.6, 1.5], [2.5, 1.4], [-2.1, -1.3], [2.2, -1.3],
+    [-3.0, 2.1], [3.0, 2.0], [-1.7, 2.8], [1.7, 2.7],
+    [-3.8, 0.6], [3.7, 0.5], [-2.8, -2.3], [2.9, -2.2],
+  ], 0.6, 0.1, -0.05);
+
+  scatterAltarPlants('/uploads/Tulip.glb', [
+    [-1.6, 2.2], [1.7, 2.1], [-2.9, 0.8], [2.8, 0.7],
+    [-1.8, -2.0], [1.8, -2.0], [-2.5, -0.4], [2.4, -0.5],
+    [-3.4, 1.8], [3.3, 1.7], [-3.0, -1.8], [3.1, -1.7],
+  ], 0.5, 0.08, -0.04);
 
   // Falling petals
   const PETAL_N = 280;
@@ -624,6 +1080,37 @@ window.createScene = function (canvas) {
   const Z_START = 12;
   const Z_END = -240; // longer journey
 
+  // Pointer raycasting for the altar icons. Listeners attached to window so the icons stay
+  // interactive without needing pointer-events on the canvas (which would block React UI).
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2(-2, -2);
+  let pointerInside = false;
+  let hoveredIcon = null;
+
+  function onPointerMove(e) {
+    const rect = canvas.getBoundingClientRect();
+    pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    pointerInside = true;
+  }
+  function onPointerClick() {
+    if (!hoveredIcon) return;
+    const data = hoveredIcon.userData;
+    if (data.action === 'toggleTheme') {
+      window.dispatchEvent(new CustomEvent('altar-theme-toggle'));
+      return;
+    }
+    if (data.link) window.open(data.link, '_blank', 'noopener');
+  }
+  function clearHover() {
+    if (!hoveredIcon) return;
+    hoveredIcon.material.emissiveIntensity = hoveredIcon.userData.baseEmissive;
+    hoveredIcon = null;
+    document.body.style.cursor = '';
+  }
+  window.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('click', onPointerClick);
+
   let raf;
   let lastSkyMix = -1;
   let lastSkyTheme = currentTheme;
@@ -680,7 +1167,30 @@ window.createScene = function (canvas) {
       });
     }
 
+    // Crystal breathing — each shard pulses on its own slight phase.
+    for (let i = 0; i < crystalMats.length; i++) {
+      const m = crystalMats[i];
+      const p = 1 + Math.sin(t * 1.4 + i * 0.7) * 0.18;
+      m.emissiveIntensity = m.userData.baseIntensity * p;
+    }
+
     treesGroup.rotation.z = Math.sin(t * 0.4) * 0.004;
+
+    // Hover state for altar icons — only active in the last stretch of the scroll, after
+    // the camera is approaching the altar at the end of the journey.
+    if (pointerInside && state.displayed > 0.85) {
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(interactiveIcons, false);
+      const newHover = hits.length > 0 ? hits[0].object : null;
+      if (newHover !== hoveredIcon) {
+        if (hoveredIcon) hoveredIcon.material.emissiveIntensity = hoveredIcon.userData.baseEmissive;
+        hoveredIcon = newHover;
+        if (hoveredIcon) hoveredIcon.material.emissiveIntensity = hoveredIcon.userData.hoverEmissive;
+        document.body.style.cursor = hoveredIcon ? 'pointer' : '';
+      }
+    } else if (hoveredIcon) {
+      clearHover();
+    }
 
     renderer.render(scene, camera);
     raf = requestAnimationFrame(tick);
@@ -703,6 +1213,9 @@ window.createScene = function (canvas) {
     dispose: () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', resize);
+      window.removeEventListener('mousemove', onPointerMove);
+      window.removeEventListener('click', onPointerClick);
+      clearHover();
       renderer.dispose();
     },
   };
