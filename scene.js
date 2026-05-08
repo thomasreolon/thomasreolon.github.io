@@ -40,6 +40,15 @@ window.createScene = function (canvas) {
     { t: 0.78, c: [0.40, 0.28, 0.50] },
     { t: 1.00, c: [0.18, 0.18, 0.36] },
   ];
+  // light theme scroll-end: deep dusk — rose/violet horizon, dark purple sky
+  const dayScrolledStops = [
+    { t: 0.00, c: [0.72, 0.42, 0.58] },
+    { t: 0.18, c: [0.64, 0.26, 0.50] },
+    { t: 0.34, c: [0.50, 0.18, 0.46] },
+    { t: 0.55, c: [0.32, 0.12, 0.40] },
+    { t: 0.78, c: [0.16, 0.10, 0.30] },
+    { t: 1.00, c: [0.06, 0.06, 0.20] },
+  ];
   const nightStops = [
     { t: 0.00, c: [0.18, 0.16, 0.30] },
     { t: 0.20, c: [0.12, 0.12, 0.26] },
@@ -47,6 +56,20 @@ window.createScene = function (canvas) {
     { t: 0.70, c: [0.05, 0.05, 0.14] },
     { t: 1.00, c: [0.02, 0.02, 0.08] },
   ];
+  // dark theme scroll-end: pre-dawn warmth — warmer violet-rose at horizon
+  const nightScrolledStops = [
+    { t: 0.00, c: [0.34, 0.18, 0.42] },
+    { t: 0.20, c: [0.24, 0.14, 0.36] },
+    { t: 0.45, c: [0.18, 0.10, 0.28] },
+    { t: 0.70, c: [0.12, 0.08, 0.22] },
+    { t: 1.00, c: [0.08, 0.06, 0.16] },
+  ];
+  function blendStops(a, b, t) {
+    return a.map((sa, i) => ({
+      t: sa.t,
+      c: [lerp(sa.c[0], b[i].c[0], t), lerp(sa.c[1], b[i].c[1], t), lerp(sa.c[2], b[i].c[2], t)],
+    }));
+  }
   function sampleStop(stops, t) {
     for (let i = 0; i < stops.length - 1; i++) {
       if (t <= stops[i + 1].t) {
@@ -310,14 +333,22 @@ window.createScene = function (canvas) {
   }
   scene.add(rocks);
 
-  // Distant mountains
+  // Mountains — flanking the road so the walk passes between them
+  // Two layers: a close dramatic ring and a far backdrop ring
   const mountains = new THREE.Group();
   const mountainMats = [];
-  for (let i = 0; i < 22; i++) {
-    const x = (rand() - 0.5) * 240;
-    const z = -180 - rand() * 130;
-    const w = 16 + rand() * 18;
-    const h = 22 + rand() * 22;
+  const MTN_N = 34;
+  for (let i = 0; i < MTN_N; i++) {
+    // Alternate sides with slight jitter so groupings feel organic
+    const side = rand() < 0.5 ? -1 : 1;
+    // Inner ring (i < 20): close flanking peaks, x: ±26–62
+    // Outer ring (i >= 20): far backdrop, x: ±55–130
+    const inner = i < 20;
+    const x = side * (inner ? 26 + rand() * 36 : 55 + rand() * 75);
+    // Spread along the full journey; inner ring concentrated mid-journey
+    const z = inner ? -50 - rand() * 200 : -30 - rand() * 240;
+    const w = inner ? 12 + rand() * 14 : 20 + rand() * 24;
+    const h = inner ? 18 + rand() * 20 : 28 + rand() * 28;
     const mat = new THREE.MeshStandardMaterial({
       color: rand() < 0.5 ? 0x6a3a4a : 0x7a4858, flatShading: true, roughness: 1,
     });
@@ -435,6 +466,12 @@ window.createScene = function (canvas) {
     sky.position.set(camera.position.x, 0, camera.position.z);
     stars.position.set(camera.position.x, 0, camera.position.z);
     celestial.position.z = z - 110;
+
+    // Gradually shift sky color as scroll progresses (max 72% blend)
+    const scrollMix = smoothstep(p) * 0.72;
+    const baseStops = currentTheme === 'light' ? dayStops : nightStops;
+    const shiftStops = currentTheme === 'light' ? dayScrolledStops : nightScrolledStops;
+    applySkyColors(blendStops(baseStops, shiftStops, scrollMix));
     celestial.position.x = Math.sin(p * Math.PI * 0.5) * 8;
 
     // Petals
