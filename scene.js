@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // Sunset / night road journey - peach blossoms, day-night theming, longer road
 export function createScene(canvas) {
+  const assetUrl = (name) => `${import.meta.env.BASE_URL}uploads/${name}`;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -419,7 +420,7 @@ export function createScene(canvas) {
   // Two flanking sharp rocks loaded from SharpRock.glb. The second is rotated differently so
   // it reads as a sibling rather than a mirror duplicate.
   const sharpRockLoader = new GLTFLoader();
-  sharpRockLoader.load('/uploads/SharpRock.glb', (gltf) => {
+  sharpRockLoader.load(assetUrl('SharpRock.glb'), (gltf) => {
     const proto = gltf.scene;
     proto.traverse((obj) => {
       if (!obj.isMesh || !obj.material) return;
@@ -948,7 +949,7 @@ export function createScene(canvas) {
     model.position.y += lift + yOffset;
   }
 
-  loadGLB('/uploads/ToriiGate.glb')
+  loadGLB(assetUrl('ToriiGate.glb'))
     .then((proto) => {
       TORII_Z.forEach((tz) => {
         const gate = proto.clone(true);
@@ -962,7 +963,7 @@ export function createScene(canvas) {
       console.warn('Failed to load ToriiGate.glb', err);
     });
 
-  loadGLB('/uploads/Statue.glb')
+  loadGLB(assetUrl('Statue.glb'))
     .then((proto) => {
       TORII_Z.forEach((tz) => {
         [[-1, Math.PI / 2], [1, -Math.PI / 2]].forEach(([side, ry]) => {
@@ -993,7 +994,7 @@ export function createScene(canvas) {
       console.warn('Failed to load Statue.glb', err);
     });
 
-  loadGLB('/uploads/Rock.glb')
+  loadGLB(assetUrl('Rock.glb'))
     .then((proto) => {
       [
         [-5, -22], [8, -38], [-9, -55], [6, -72],
@@ -1032,7 +1033,7 @@ export function createScene(canvas) {
       .catch((err) => console.warn('Failed to load ' + url, err));
   }
 
-  scatterAltarPlants('/uploads/GrassPatch.glb', [
+  scatterAltarPlants(assetUrl('GrassPatch.glb'), [
     // Keep center path visually open; denser side/back clusters.
     [-3.2, 0.6], [-2.8, 1.8], [-3.5, -0.9], [-2.4, -1.8],
     [3.2, 0.7], [2.7, 1.9], [3.4, -0.8], [2.5, -1.7],
@@ -1041,13 +1042,13 @@ export function createScene(canvas) {
     [-2.3, 3.4], [2.4, 3.3], [-2.4, -3.3], [2.5, -3.2],
   ], 0.5, 0.1, -0.08);
 
-  scatterAltarPlants('/uploads/BellFlower.glb', [
+  scatterAltarPlants(assetUrl('BellFlower.glb'), [
     [-2.6, 1.5], [2.5, 1.4], [-2.1, -1.3], [2.2, -1.3],
     [-3.0, 2.1], [3.0, 2.0], [-1.7, 2.8], [1.7, 2.7],
     [-3.8, 0.6], [3.7, 0.5], [-2.8, -2.3], [2.9, -2.2],
   ], 0.6, 0.1, -0.05);
 
-  scatterAltarPlants('/uploads/Tulip.glb', [
+  scatterAltarPlants(assetUrl('Tulip.glb'), [
     [-1.6, 2.2], [1.7, 2.1], [-2.9, 0.8], [2.8, 0.7],
     [-1.8, -2.0], [1.8, -2.0], [-2.5, -0.4], [2.4, -0.5],
     [-3.4, 1.8], [3.3, 1.7], [-3.0, -1.8], [3.1, -1.7],

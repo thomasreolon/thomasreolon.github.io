@@ -268,6 +268,7 @@ function Hero({ T }) {
 
   useEffect(() => {
     if (!titleRef.current) return;
+    gsap.registerPlugin(ScrollTrigger);
     const letters = titleRef.current.querySelectorAll('.hero-letter');
     const targets = Array.from(letters).map((_, i) => {
       const angle = (i * 137.5 * Math.PI) / 180;
