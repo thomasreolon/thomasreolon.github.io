@@ -1,0 +1,606 @@
+// Thomas Reolon portfolio — theme-aware, mobile preview, projects menu, tweaks
+const { useEffect, useRef, useState } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "light",
+  "mobile": false
+}/*EDITMODE-END*/;
+
+// ---------- Tweaks plumbing ----------
+function useTweaks() {
+  const [tweaks, setTweaks] = useState(TWEAK_DEFAULTS);
+  const setTweak = (key, value) => {
+    setTweaks((prev) => {
+      const next = { ...prev, [key]: value };
+      try {
+        window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [key]: value } }, '*');
+      } catch (_) {}
+      return next;
+    });
+  };
+  return [tweaks, setTweak];
+}
+
+function TweaksPanel({ tweaks, setTweak, theme }) {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const onMsg = (e) => {
+      if (!e.data) return;
+      if (e.data.type === '__activate_edit_mode') setShow(true);
+      if (e.data.type === '__deactivate_edit_mode') setShow(false);
+    };
+    window.addEventListener('message', onMsg);
+    try { window.parent.postMessage({ type: '__edit_mode_available' }, '*'); } catch (_) {}
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+  if (!show) return null;
+  const dark = theme === 'dark';
+  const close = () => {
+    setShow(false);
+    try { window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*'); } catch (_) {}
+  };
+  return (
+    <div
+      className="fixed bottom-6 right-6 w-72 rounded-xl shadow-2xl backdrop-blur-md p-5"
+      style={{
+        zIndex: 60,
+        background: dark ? 'rgba(20,18,30,0.85)' : 'rgba(255,250,242,0.92)',
+        color: dark ? '#e8e2d8' : '#2a1a14',
+        border: dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+      }}
+    >
+      <div className="flex justify-between items-center mb-4">
+        <span className="font-mono text-[11px] uppercase tracking-[0.3em] opacity-70">Tweaks</span>
+        <button onClick={close} className="text-lg leading-none opacity-60 hover:opacity-100">×</button>
+      </div>
+      <div className="space-y-5">
+        <div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.25em] opacity-60 mb-2">Theme</div>
+          <div className="flex gap-2">
+            {[['light', 'Day'], ['dark', 'Night']].map(([k, l]) => (
+              <button
+                key={k}
+                onClick={() => setTweak('theme', k)}
+                className="flex-1 py-2 rounded-md text-sm transition"
+                style={{
+                  background: tweaks.theme === k ? (dark ? '#e8e2d8' : '#2a1a14') : 'transparent',
+                  color: tweaks.theme === k ? (dark ? '#1a1428' : '#fbeed8') : 'inherit',
+                  border: '1px solid ' + (dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'),
+                }}
+              >{l}</button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.25em] opacity-60 mb-2">Viewport</div>
+          <div className="flex gap-2">
+            {[[false, 'Desktop'], [true, 'Mobile']].map(([k, l]) => (
+              <button
+                key={l}
+                onClick={() => setTweak('mobile', k)}
+                className="flex-1 py-2 rounded-md text-sm transition"
+                style={{
+                  background: tweaks.mobile === k ? (dark ? '#e8e2d8' : '#2a1a14') : 'transparent',
+                  color: tweaks.mobile === k ? (dark ? '#1a1428' : '#fbeed8') : 'inherit',
+                  border: '1px solid ' + (dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'),
+                }}
+              >{l}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Theme tokens ----------
+function tokens(theme) {
+  if (theme === 'dark') {
+    return {
+      bg: '#0e0c1a',
+      heading: '#f4ebe2',
+      titleHero: '#a89aa2',           // greyer hero title
+      body: '#d8cec4',
+      muted: '#9a8e88',
+      mono: '#b8aea4',
+      cardBg: 'rgba(20,16,32,0.38)',
+      cardBorder: 'rgba(255,255,255,0.08)',
+      headerSub: '#c0b4ae',
+      ringSelected: '#f4ebe2',
+    };
+  }
+  return {
+    bg: '#f4d8b8',
+    heading: '#2a1a14',
+    titleHero: '#a89890',             // greyer hero title in light too
+    body: '#2a1a14',
+    muted: '#5a4438',
+    mono: '#5a4438',
+    cardBg: 'rgba(255,250,242,0.52)',
+    cardBorder: 'rgba(80,40,20,0.10)',
+    headerSub: '#3a261c',
+    ringSelected: '#2a1a14',
+  };
+}
+
+// ---------- Scene wiring ----------
+function useScrollScene(canvasRef, theme) {
+  const sceneRef = useRef(null);
+  useEffect(() => {
+    const sc = window.createScene(canvasRef.current);
+    sceneRef.current = sc;
+    gsap.registerPlugin(ScrollTrigger);
+    const trigger = ScrollTrigger.create({
+      trigger: 'main',
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: 0.6,
+      onUpdate: (self) => sc.setProgress(self.progress),
+    });
+    return () => { trigger.kill(); sc.dispose(); };
+  }, []);
+  useEffect(() => {
+    if (sceneRef.current) sceneRef.current.setTheme(theme);
+  }, [theme]);
+}
+
+// ---------- Theme toggle ----------
+function ThemeToggle({ theme, onToggle, T }) {
+  const isDark = theme === 'dark';
+  return (
+    <button
+      onClick={onToggle}
+      aria-label="Toggle theme"
+      className="flex items-center justify-center w-9 h-9 rounded-full transition"
+      style={{
+        background: T.cardBg,
+        border: '1px solid ' + T.cardBorder,
+        color: T.heading,
+        backdropFilter: 'blur(8px)',
+      }}
+    >
+      {isDark ? (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+      ) : (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      )}
+    </button>
+  );
+}
+
+// ---------- Projects nav (top right) ----------
+const PROJECTS = [
+  { id: 'real-estate', label: 'Real Estate' },
+  { id: 'finance', label: 'Finance' },
+  { id: 'ai', label: 'Machine Learning' },
+  { id: 'contact', label: 'Contact' },
+];
+
+function ProjectsMenu({ T }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-3 px-4 py-2 rounded-full text-[12px] tracking-[0.3em] uppercase transition"
+        style={{
+          background: T.cardBg,
+          border: '1px solid ' + T.cardBorder,
+          color: T.heading,
+          backdropFilter: 'blur(8px)',
+        }}
+      >
+        {/* hamburger on mobile, text+arrow on md+ */}
+        <span className="hidden md:inline">Projects</span>
+        <span className="hidden md:inline" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▾</span>
+        <span className="md:hidden" style={{ fontSize: 18, lineHeight: 1 }}>☰</span>
+      </button>
+      {open && (
+        <div
+          className="absolute right-0 mt-2 w-64 rounded-xl overflow-hidden shadow-xl"
+          style={{
+            background: T.cardBg,
+            border: '1px solid ' + T.cardBorder,
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          {PROJECTS.map((p, i) => (
+            <a
+              key={p.id}
+              href={'#' + p.id}
+              onClick={() => setOpen(false)}
+              className="flex justify-between items-center px-5 py-3 text-sm hover:opacity-80 transition"
+              style={{
+                color: T.heading,
+                borderTop: i === 0 ? 'none' : '1px solid ' + T.cardBorder,
+              }}
+            >
+              <span>{p.label}</span>
+              <span className="font-mono text-xs opacity-50">{String(i + 1).padStart(2, '0')}</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- Hero with exploding letters ----------
+function SplitLetters({ text, color }) {
+  const chars = [...text];
+  return (
+    <span aria-label={text}>
+      {chars.map((ch, i) => (
+        <span
+          key={i}
+          className="hero-letter inline-block"
+          style={{ whiteSpace: 'pre', color }}
+        >
+          {ch === ' ' ? '\u00A0' : ch}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function Hero({ T }) {
+  const heroRef = useRef(null);
+  const titleRef = useRef(null);
+
+  useEffect(() => {
+    if (!titleRef.current) return;
+    const letters = titleRef.current.querySelectorAll('.hero-letter');
+    const targets = Array.from(letters).map((_, i) => {
+      const angle = (i * 137.5 * Math.PI) / 180;
+      const dist = 1100 + ((i * 173) % 700);
+      return {
+        x: Math.cos(angle) * dist,
+        y: Math.sin(angle) * dist * 0.7 - 60,
+        rot: ((i * 41) % 720) - 360,
+      };
+    });
+
+    const tween = gsap.to(letters, {
+      scrollTrigger: {
+        trigger: heroRef.current,
+        start: 'top top',
+        end: '40% top',          // letters are gone within first 40% of hero scroll
+        scrub: 0.25,
+      },
+      x: (i) => targets[i].x,
+      y: (i) => targets[i].y,
+      rotate: (i) => targets[i].rot,
+      opacity: 0,
+      ease: 'power3.in',
+      stagger: { amount: 0.25, from: 'center' },
+    });
+
+    return () => { tween.scrollTrigger && tween.scrollTrigger.kill(); tween.kill(); };
+  }, []);
+
+  return (
+    <section
+      ref={heroRef}
+      data-screen-label="01 Hero"
+      className="relative min-h-screen flex flex-col px-8 md:px-16 py-10"
+    >
+      <div className="flex-1 flex flex-col justify-center items-center text-center">
+        <p
+          className="font-mono text-[13px] tracking-[0.3em] uppercase mb-10"
+          style={{ color: T.muted }}
+        >
+          AI · Software Development · Machine Learning
+        </p>
+        <h1
+          ref={titleRef}
+          className="font-display text-[18vw] md:text-[16vw] leading-[0.85] tracking-tight select-none"
+          style={{ wordSpacing: '0.05em' }}
+        >
+          <div className="block"><SplitLetters text="THOMAS" color={T.titleHero} /></div>
+          <div className="block"><SplitLetters text="REOLON" color={T.titleHero} /></div>
+        </h1>
+        <p
+          className="mt-12 max-w-xl text-xl md:text-2xl leading-relaxed"
+          style={{ color: T.body }}
+        >
+          <span style={{ color: '#ffffff' }}>Helping companies reach results with math and code.</span>
+        </p>
+      </div>
+
+      <footer
+        className="flex justify-between items-end text-[12px] tracking-[0.32em] uppercase"
+        style={{ color: T.muted }}
+      >
+        <span style={{ color: '#ffffff' }}>Scroll to wander</span>
+        <span className="font-mono">↓</span>
+      </footer>
+    </section>
+  );
+}
+
+// ---------- Reusable card ----------
+function Card({ T, children, className = '' }) {
+  return (
+    <div
+      className={'rounded-2xl p-8 md:p-10 ' + className}
+      style={{
+        background: T.cardBg,
+        border: '1px solid ' + T.cardBorder,
+        backdropFilter: 'blur(14px)',
+        WebkitBackdropFilter: 'blur(14px)',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function ChapterMarker({ index, label, T }) {
+  return (
+    <div className="flex items-center gap-5 text-[13px] tracking-[0.3em] uppercase" style={{ color: T.muted }}>
+      <span className="font-mono">Ch. {String(index).padStart(2, '0')}</span>
+      <span className="h-px w-16" style={{ background: T.muted, opacity: 0.4 }} />
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function RealEstate({ T }) {
+  return (
+    <section
+      id="real-estate"
+      data-screen-label="02 Real Estate"
+      className="min-h-screen px-6 md:px-16 py-32 flex items-center"
+    >
+      <div className="max-w-3xl ml-auto w-full">
+        <Card T={T}>
+          <ChapterMarker index={1} label="Real Estate" T={T} />
+          <h2
+            className="mt-8 font-display text-4xl md:text-5xl leading-[0.95]"
+            style={{ color: T.heading }}
+          >
+            Listings, leases &amp; the long view.
+          </h2>
+          <p className="mt-8 text-xl leading-relaxed" style={{ color: T.body }}>
+            Six years building search, valuation and transaction tooling for residential
+            and commercial brokerages. From comp-pulling pipelines that ingest a million
+            MLS rows a night, to closing-room workflows that survived a real audit.
+          </p>
+          <dl className="mt-10 space-y-7">
+            {[
+              ['MLS ingestion & dedup', 'A pipeline that reconciles overlapping feeds from twelve regional boards into one canonical record per property.'],
+              ['Automated valuation', 'Gradient-boosted comp models with confidence intervals — used by underwriters who actually trust them.'],
+              ['Closing workflows', 'Document automation for transactions where one missing initial costs a week.'],
+            ].map(([k, v]) => (
+              <div key={k}>
+                <dt className="font-display text-2xl md:text-3xl" style={{ color: T.heading }}>{k}</dt>
+                <dd className="mt-2 text-base md:text-lg leading-relaxed" style={{ color: T.body }}>{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </Card>
+      </div>
+    </section>
+  );
+}
+
+function Finance({ T }) {
+  return (
+    <section
+      id="finance"
+      data-screen-label="03 Finance"
+      className="min-h-screen px-6 md:px-16 py-32 flex items-center"
+    >
+      <div className="max-w-3xl w-full">
+        <Card T={T}>
+          <ChapterMarker index={2} label="Finance" T={T} />
+          <h2
+            className="mt-8 font-display text-4xl md:text-5xl leading-[0.95]"
+            style={{ color: T.heading }}
+          >
+            Numbers that have to be right.
+          </h2>
+          <p className="mt-8 text-xl leading-relaxed" style={{ color: T.body }}>
+            Trading infrastructure, settlement systems and the unglamorous reconciliation
+            jobs that run at 4am. Comfortable with low-latency event flows, eventual
+            consistency, and the kind of testing where a single bad tick is a Monday
+            morning meeting.
+          </p>
+          <div className="mt-10 space-y-8">
+            {[
+              ['$1.4B', 'in daily volume routed through systems I built'],
+              ['11ms', 'p99 quote latency on the public market data API'],
+              ['Zero', 'settlement breaks YTD across reconciled venues'],
+            ].map(([n, l]) => (
+              <div
+                key={l}
+                className="flex items-baseline gap-6 pt-6"
+                style={{ borderTop: '1px solid ' + T.cardBorder }}
+              >
+                <div className="font-display text-5xl md:text-7xl leading-none" style={{ color: T.heading }}>{n}</div>
+                <div className="text-base md:text-lg max-w-xs leading-snug" style={{ color: T.body }}>{l}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </section>
+  );
+}
+
+function AISection({ T }) {
+  return (
+    <section
+      id="ai"
+      data-screen-label="04 AI"
+      className="min-h-screen px-6 md:px-16 py-32 flex items-center"
+    >
+      <div className="max-w-3xl ml-auto w-full">
+        <Card T={T}>
+          <ChapterMarker index={3} label="Machine Learning" T={T} />
+          <h2
+            className="mt-8 font-display text-4xl md:text-5xl leading-[0.95]"
+            style={{ color: T.heading }}
+          >
+            Models that earn their place.
+          </h2>
+          <p className="mt-8 text-xl leading-relaxed" style={{ color: T.body }}>
+            Applied ML for the boring, valuable problems — fraud signals, document
+            extraction, risk scoring, retrieval over messy private data. I prefer small
+            models that ship, evaluation harnesses that hurt, and humans in the loop
+            where they belong.
+          </p>
+          <div className="mt-10 pt-8" style={{ borderTop: '1px solid ' + T.cardBorder }}>
+            <p className="font-mono text-[13px] uppercase tracking-[0.3em] mb-4" style={{ color: T.muted }}>Currently</p>
+            <p className="font-display text-2xl md:text-3xl leading-snug" style={{ color: T.heading }}>
+              Building retrieval and agent infrastructure for a private credit fund —
+              ingesting forty years of deal memos and turning them into something analysts
+              actually use.
+            </p>
+          </div>
+        </Card>
+      </div>
+    </section>
+  );
+}
+
+function Contact({ T }) {
+  return (
+    <section
+      id="contact"
+      data-screen-label="05 Contact"
+      className="min-h-screen px-6 md:px-16 pt-32 pb-12 flex flex-col"
+    >
+      <div className="flex-1 flex flex-col justify-center items-center text-center w-full">
+        <Card T={T} className="w-full max-w-2xl">
+          <div className="flex justify-center"><ChapterMarker index={4} label="Contact" T={T} /></div>
+          <div className="mt-8 grid gap-6">
+            {[
+              ['Email', 'thomas.reolon.it@gmail.com', 'mailto:thomas.reolon.it@gmail.com'],
+              ['LinkedIn', 'in/thomas-reolon-9270971a3', 'https://www.linkedin.com/in/thomas-reolon-9270971a3'],
+            ].map(([l, v, href]) => (
+              <a
+                key={l}
+                href={href}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-xl px-6 py-5 transition hover:scale-[1.01] active:scale-[0.99]"
+                style={{
+                  background: T.cardBg,
+                  border: '1px solid ' + T.cardBorder,
+                  color: T.heading,
+                }}
+              >
+                <div className="font-mono text-[11px] uppercase tracking-[0.3em] mb-1" style={{ color: T.muted }}>{l}</div>
+                <div className="font-display text-base md:text-lg break-all">{v}</div>
+              </a>
+            ))}
+          </div>
+        </Card>
+      </div>
+      <footer
+        className="flex justify-between items-end text-[12px] tracking-[0.32em] uppercase mt-12"
+        style={{ color: T.muted }}
+      >
+        <span>© 2026 Thomas Reolon</span>
+        <span className="font-mono">Built quietly</span>
+      </footer>
+    </section>
+  );
+}
+
+function App() {
+  const [tweaks, setTweak] = useTweaks();
+  const T = tokens(tweaks.theme);
+  const canvasRef = useRef(null);
+  useScrollScene(canvasRef, tweaks.theme);
+
+  // Apply background color to body so it matches theme during reload/spaces
+  useEffect(() => {
+    document.body.style.background = T.bg;
+  }, [tweaks.theme]);
+
+  const inner = (
+    <>
+      <canvas
+        ref={canvasRef}
+        className="fixed inset-0 w-full h-full pointer-events-none"
+        style={{ zIndex: 0 }}
+      />
+      <header
+        className="fixed top-0 left-0 right-0 px-6 md:px-16 py-6 flex justify-between items-center"
+        style={{ zIndex: 30 }}
+      >
+        <span
+          className="font-mono text-[12px] tracking-[0.32em] uppercase"
+          style={{
+            color: T.heading,
+            display: 'inline-block',
+            padding: '4px 14px',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            maskImage: 'linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%)',
+          }}
+        >
+          Thomas Reolon
+        </span>
+        <div className="flex items-center gap-2">
+          <ThemeToggle theme={tweaks.theme} onToggle={() => setTweak('theme', tweaks.theme === 'dark' ? 'light' : 'dark')} T={T} />
+          <ProjectsMenu T={T} />
+        </div>
+      </header>
+      <main className="relative" style={{ zIndex: 1 }}>
+        <Hero T={T} />
+        <RealEstate T={T} />
+        <Finance T={T} />
+        <AISection T={T} />
+        <Contact T={T} />
+      </main>
+    </>
+  );
+
+  // Mobile preview: constrain to a phone frame
+  return (
+    <>
+      {tweaks.mobile ? (
+        <div
+          className="fixed inset-0 flex items-center justify-center"
+          style={{ background: tweaks.theme === 'dark' ? '#050409' : '#3a261c', zIndex: 0 }}
+        >
+          <div
+            className="relative overflow-hidden shadow-2xl"
+            style={{
+              width: 390,
+              height: 844,
+              borderRadius: 44,
+              border: '10px solid #111',
+              background: T.bg,
+            }}
+          >
+            <div style={{ width: '100%', height: '100%', overflow: 'auto', position: 'relative' }}>
+              {inner}
+            </div>
+          </div>
+        </div>
+      ) : (
+        inner
+      )}
+      <TweaksPanel tweaks={tweaks} setTweak={setTweak} theme={tweaks.theme} />
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
