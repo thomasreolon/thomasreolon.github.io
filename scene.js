@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-// Sunset / night road journey — peach blossoms, day-night theming, longer road
-window.createScene = function (canvas) {
+// Sunset / night road journey - peach blossoms, day-night theming, longer road
+export function createScene(canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -1289,5 +1289,4 @@ window.createScene = function (canvas) {
       renderer.dispose();
     },
   };
-};
-window.dispatchEvent(new CustomEvent('scene-ready'));
+}

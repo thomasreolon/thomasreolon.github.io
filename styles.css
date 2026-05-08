@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  background: #f4d8b8;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: 'Manrope', system-ui, sans-serif;
+  color: #2a1a14;
+  -webkit-font-smoothing: antialiased;
+  font-size: 17px;
+}
+
+.font-display {
+  font-family: 'Titan One', serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+::selection {
+  background: #2a1a14;
+  color: #f4d8b8;
+}
