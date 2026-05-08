@@ -453,7 +453,7 @@ window.createScene = function (canvas) {
 
   // Tall stele standing on the platform (intentionally irregular, hand-carved look).
   const STELE_W = 1.75, STELE_H = 4.0, STELE_D = 0.7;
-  const STELE_BASE_Y = 0.8;
+  const STELE_BASE_Y = 0.74; // slightly embedded into platform to avoid visible base seam
   const STELE_TOP_R = STELE_W * 0.42;
   const STELE_BOT_R = STELE_W * 0.58;
   const steleMat = new THREE.MeshStandardMaterial({ color: 0x8b7066, flatShading: true, roughness: 1 });
@@ -472,6 +472,15 @@ window.createScene = function (canvas) {
   stele.rotation.y = 0.17;
   altarGroup.add(stele);
 
+  // Base collar to mask the stele/platform seam from every camera angle.
+  const steleCollar = new THREE.Mesh(
+    new THREE.CylinderGeometry(STELE_BOT_R * 1.06, STELE_BOT_R * 1.14, 0.24, 8),
+    new THREE.MeshStandardMaterial({ color: 0x775f54, flatShading: true, roughness: 1 })
+  );
+  steleCollar.position.set(0, STELE_BASE_Y + 0.02, 0);
+  steleCollar.rotation.y = 0.17;
+  altarGroup.add(steleCollar);
+
   // Carved cap stone giving the stele a distinct crown silhouette.
   const steleCap = new THREE.Mesh(
     new THREE.CylinderGeometry(STELE_W * 0.48, STELE_W * 0.42, 0.26, 8),
@@ -480,6 +489,48 @@ window.createScene = function (canvas) {
   steleCap.position.set(0, STELE_BASE_Y + STELE_H + 0.13, 0);
   steleCap.rotation.y = 0.17;
   altarGroup.add(steleCap);
+
+  // Animated altar flame: layered low-poly fire cones with a warm point light.
+  const flameGroup = new THREE.Group();
+  const flameOuter = new THREE.Mesh(
+    new THREE.ConeGeometry(0.20, 0.62, 8, 1),
+    new THREE.MeshStandardMaterial({
+      color: 0xff9a3d,
+      emissive: 0xff5a1f,
+      emissiveIntensity: 2.4,
+      flatShading: true,
+      roughness: 0.25,
+      metalness: 0,
+      transparent: true,
+      opacity: 0.92,
+      depthWrite: false,
+    })
+  );
+  flameOuter.position.y = 0.28;
+  flameGroup.add(flameOuter);
+  const flameInner = new THREE.Mesh(
+    new THREE.ConeGeometry(0.11, 0.40, 7, 1),
+    new THREE.MeshStandardMaterial({
+      color: 0xffe7a8,
+      emissive: 0xffe3a0,
+      emissiveIntensity: 2.8,
+      flatShading: true,
+      roughness: 0.15,
+      metalness: 0,
+      transparent: true,
+      opacity: 0.95,
+      depthWrite: false,
+    })
+  );
+  flameInner.position.y = 0.25;
+  flameGroup.add(flameInner);
+  flameGroup.position.set(0, STELE_BASE_Y + STELE_H + 0.16, 0);
+  flameGroup.scale.setScalar(3);
+  flameGroup.rotation.y = 0.17;
+  altarGroup.add(flameGroup);
+  const flameLight = new THREE.PointLight(0xffb866, 1.4, 8.5, 2);
+  flameLight.position.set(0, STELE_BASE_Y + STELE_H + 0.44, 0.25);
+  altarGroup.add(flameLight);
 
   // Soft fill light near the stele so the runes stay readable at night.
   const altarFill = new THREE.PointLight(0xffe2bf, 1.2, 10, 2);
@@ -571,13 +622,18 @@ window.createScene = function (canvas) {
   const interactiveIcons = [];
 
   // Two main rune planes — sized large with bright accent fill so they read clearly.
+  const RUNE_Y_OFFSET = -0.35; // push all altar runes slightly lower to avoid UI overlap
+  const MAIN_RUNE_SCALE = 0.8; // 20% smaller
+  const MAIN_RUNE_X_OFFSET = -0.14; // shifted left for better composition
   [
     { sym: '@',  y: 3.10, link: 'mailto:thomas.reolon.it@gmail.com',                 emissive: 0xffd5a8, accent: '#ffd5a8', label: 'Email' },
     { sym: 'in', y: 2.05, link: 'https://www.linkedin.com/in/thomas-reolon-9270971a3', emissive: 0x9ec0ff, accent: '#9ec0ff', label: 'LinkedIn' },
   ].forEach(({ sym, y, link, emissive, accent, label }) => {
-    const frontZ = steleRadiusAt(y) + 0.03;
+    const runeY = y + RUNE_Y_OFFSET;
+    const frontZ = steleRadiusAt(runeY) + 0.03;
     const recess = new THREE.Mesh(new THREE.CircleGeometry(0.5, 24), recessMat);
-    recess.position.set(0, y, frontZ - 0.012);
+    recess.position.set(MAIN_RUNE_X_OFFSET, runeY, frontZ - 0.012);
+    recess.scale.setScalar(MAIN_RUNE_SCALE);
     altarGroup.add(recess);
 
     const tex = makeIconTexture(sym, accent);
@@ -600,7 +656,8 @@ window.createScene = function (canvas) {
       depthWrite: false,
     });
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.92, 0.92), mat);
-    mesh.position.set(0, y, frontZ);
+    mesh.position.set(MAIN_RUNE_X_OFFSET, runeY, frontZ);
+    mesh.scale.setScalar(MAIN_RUNE_SCALE);
     mesh.userData = {
       isAltarIcon: true,
       link,
@@ -614,7 +671,7 @@ window.createScene = function (canvas) {
 
   // Smaller crescent moon in the upper-right of the stele — clicking it toggles theme.
   {
-    const moonY = 3.95;
+    const moonY = 3.95 + RUNE_Y_OFFSET;
     const moonX = 0.45;
     const frontZ = steleRadiusAt(moonY) + 0.03;
     const recess = new THREE.Mesh(new THREE.CircleGeometry(0.28, 24), recessMat);
@@ -875,6 +932,7 @@ window.createScene = function (canvas) {
   const GATE_SCALE   = 16;      // 20% smaller than previous size 20
   const GATE_X_OFFSET = 0.1;    // slightly right of the road centerline
   const STATUE_SCALE = 2.52;   // 1.4x bigger than previous 1.8
+  const STATUE_GROUND_OFFSET = -0.75; // sink statues lower so they sit firmly on terrain
   const ROCK_SCALE   = 2.0;  // adjust if model appears too big/small
 
   const gltfLoader = new GLTFLoader();
@@ -925,7 +983,8 @@ window.createScene = function (canvas) {
               if (mat.needsUpdate !== undefined) mat.needsUpdate = true;
             });
           });
-          placeModelOnGround(statue, sx, tz + 0.5, groundY(sx, tz + 180), -0.05);
+          const statueZ = tz + 0.1;
+          placeModelOnGround(statue, sx, statueZ, groundY(sx, statueZ + 180), STATUE_GROUND_OFFSET);
           scene.add(statue);
         });
       });
@@ -1173,6 +1232,17 @@ window.createScene = function (canvas) {
       const p = 1 + Math.sin(t * 1.4 + i * 0.7) * 0.18;
       m.emissiveIntensity = m.userData.baseIntensity * p;
     }
+
+    // Flame flicker: subtle shape wobble + light/intensity breathing.
+    const flamePulseA = 1 + Math.sin(t * 8.0) * 0.12;
+    const flamePulseB = 1 + Math.sin(t * 11.0 + 1.2) * 0.10;
+    flameOuter.scale.set(1.0 + Math.sin(t * 6.6) * 0.06, flamePulseA, 1.0 + Math.cos(t * 7.1) * 0.06);
+    flameInner.scale.set(1.0 + Math.sin(t * 7.9 + 0.4) * 0.05, flamePulseB, 1.0 + Math.cos(t * 8.3 + 0.2) * 0.05);
+    flameGroup.rotation.z = Math.sin(t * 4.2) * 0.05;
+    flameGroup.rotation.x = Math.cos(t * 3.7) * 0.04;
+    flameOuter.material.emissiveIntensity = 2.2 + Math.sin(t * 9.4) * 0.35;
+    flameInner.material.emissiveIntensity = 2.7 + Math.sin(t * 10.3 + 0.6) * 0.30;
+    flameLight.intensity = 1.3 + Math.sin(t * 10.6) * 0.22;
 
     treesGroup.rotation.z = Math.sin(t * 0.4) * 0.004;
 

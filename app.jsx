@@ -538,25 +538,11 @@ function Contact({ T }) {
       className="min-h-screen px-6 md:px-16 pt-32 pb-12 flex flex-col"
     >
       <div className="flex-1 flex flex-col justify-start items-center text-center w-full">
-        <div
-          className="flex items-center gap-5 text-[13px] tracking-[0.3em] uppercase"
-          style={{ color: '#ffffff', textShadow: '0 1px 6px rgba(0,0,0,0.45)' }}
-        >
-          <span className="font-mono">Ch. 04</span>
-          <span className="h-px w-16" style={{ background: '#ffffff', opacity: 0.55 }} />
-          <span>Contact</span>
-        </div>
         <p
-          className="mt-10 max-w-md font-display text-2xl md:text-3xl leading-snug"
+          className="mt-10 mb-14 max-w-md font-display text-2xl md:text-3xl leading-snug"
           style={{ color: '#ffffff', textShadow: '0 1px 10px rgba(0,0,0,0.50)' }}
         >
-          Approach the altar.
-        </p>
-        <p
-          className="mt-4 max-w-md text-base leading-relaxed"
-          style={{ color: '#ffffff', textShadow: '0 1px 6px rgba(0,0,0,0.50)' }}
-        >
-          Hover the runes on the stele to wake them — tap one to send a message.
+          Contacts on the altar.
         </p>
       </div>
       <footer
