@@ -1,3 +1,6 @@
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
 // Sunset / night road journey — peach blossoms, day-night theming, longer road
 window.createScene = function (canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -21,6 +24,7 @@ window.createScene = function (canvas) {
     };
   }
   const rand = mulberry32(20260507);
+  const settleOffset = (z) => (z < -165 && z > -220 ? -0.18 : 0);
 
   function terrainHeight(x, z) {
     return (
@@ -201,7 +205,9 @@ window.createScene = function (canvas) {
         new THREE.CylinderGeometry(0.06, 0.08, 2.2, 5),
         new THREE.MeshStandardMaterial({ color: 0x3a2218, flatShading: true })
       );
-      post.position.set(side * 2.6, 1.1, z);
+      const x = side * 2.6;
+      const baseY = terrainHeight(x, z + 180);
+      post.position.set(x, baseY + 1.1 + settleOffset(z), z);
       lanterns.add(post);
       const lamp = new THREE.Mesh(
         new THREE.IcosahedronGeometry(0.22, 0),
@@ -209,7 +215,7 @@ window.createScene = function (canvas) {
           color: 0xffe2a0, emissive: 0xffb060, emissiveIntensity: 0, flatShading: true,
         })
       );
-      lamp.position.set(side * 2.6, 2.3, z);
+      lamp.position.set(x, baseY + 2.3 + settleOffset(z), z);
       lamp.userData.isLamp = true;
       lanterns.add(lamp);
     }
@@ -231,7 +237,9 @@ window.createScene = function (canvas) {
       const branch = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.09, bL, 5), trunkMat);
       branch.position.y = trunkH * (0.55 + rng() * 0.25);
       const angle = rng() * Math.PI * 2;
-      branch.rotation.z = (rng() * 0.6 + 0.4) * (rng() < 0.5 ? -1 : 1);
+      branch.rotation.order = 'ZYX';
+      branch.rotation.z = rng() * 0.6 + 0.4;
+      rng(); // consume to keep rng sequence length
       branch.rotation.y = angle;
       branch.position.x += Math.cos(angle) * 0.2;
       branch.position.z += Math.sin(angle) * 0.2;
@@ -264,7 +272,7 @@ window.createScene = function (canvas) {
     for (const side of [-1, 1]) {
       if (rand() < 0.16) continue;
       const x = side * (3.4 + rand() * 6.5);
-      const y = terrainHeight(x, z);
+      const y = terrainHeight(x, z + 180) + settleOffset(z);
       const tree = makeBlossomTree(treeSeed++);
       tree.position.set(x, y, z);
       tree.scale.setScalar(0.85 + rand() * 0.55);
@@ -276,13 +284,24 @@ window.createScene = function (canvas) {
     for (const side of [-1, 1]) {
       if (rand() < 0.4) continue;
       const x = side * (10 + rand() * 16);
-      const y = terrainHeight(x, z);
+      const y = terrainHeight(x, z + 180) + settleOffset(z);
       const tree = makeBlossomTree(treeSeed++);
       tree.position.set(x, y, z);
       tree.scale.setScalar(0.7 + rand() * 0.5);
       tree.rotation.y = rand() * Math.PI * 2;
       treesGroup.add(tree);
     }
+  }
+  // Remove trees that intersect the first large end-mountain volume.
+  const firstMountain = { x: 0, z: -268, r: 55, h: 95, baseY: -1 };
+  for (let i = treesGroup.children.length - 1; i >= 0; i--) {
+    const t = treesGroup.children[i];
+    const dx = t.position.x - firstMountain.x;
+    const dz = t.position.z - firstMountain.z;
+    const d = Math.hypot(dx, dz);
+    if (d >= firstMountain.r) continue;
+    const surfaceY = firstMountain.baseY + (1 - d / firstMountain.r) * firstMountain.h;
+    if (t.position.y < surfaceY + 6) treesGroup.remove(t);
   }
   scene.add(treesGroup);
 
@@ -293,7 +312,7 @@ window.createScene = function (canvas) {
     if (rand() < 0.5) continue;
     const side = rand() < 0.5 ? -1 : 1;
     const x = side * (2.6 + rand() * 8);
-    const y = terrainHeight(x, z);
+    const y = terrainHeight(x, z + 180) + settleOffset(z);
     const bush = new THREE.Group();
     const cnt = 2 + Math.floor(rand() * 3);
     for (let i = 0; i < cnt; i++) {
@@ -323,9 +342,9 @@ window.createScene = function (canvas) {
     const z = 14 - rand() * 360;
     let x = (rand() - 0.5) * 50;
     if (Math.abs(x) < 2.4) x = (x < 0 ? -1 : 1) * (2.4 + rand() * 1.5);
-    const y = terrainHeight(x, z);
+    const y = terrainHeight(x, z + 180) + settleOffset(z);
     const s = 0.3 + rand() * 1.2;
-    dummy.position.set(x, y + 0.1, z);
+    dummy.position.set(x, y, z);
     dummy.rotation.set(rand() * Math.PI, rand() * Math.PI, rand() * Math.PI);
     dummy.scale.set(s * 1.4, s, s * 1.2);
     dummy.updateMatrix();
@@ -358,7 +377,166 @@ window.createScene = function (canvas) {
     mesh.rotation.y = rand() * Math.PI;
     mountains.add(mesh);
   }
+  // Three close mountains at end of road — fill the screen as camera approaches
+  [
+    { x:  0,  z: -268, w: 55, h: 95, s: 5, r: 0.3 },
+    { x: -14, z: -282, w: 38, h: 72, s: 5, r: 1.4 },
+    { x:  20, z: -290, w: 30, h: 60, s: 6, r: 2.1 },
+  ].forEach(({ x, z, w, h, s, r }) => {
+    const mat = new THREE.MeshStandardMaterial({ color: 0x5a3050, flatShading: true, roughness: 1 });
+    mountainMats.push(mat);
+    const mesh = new THREE.Mesh(new THREE.ConeGeometry(w, h, s), mat);
+    mesh.position.set(x, h / 2 - 1, z);
+    mesh.rotation.y = r;
+    mountains.add(mesh);
+  });
+
+  // Small crack exactly at camera-path entry on first mountain.
+  const crackMat = new THREE.MeshStandardMaterial({ color: 0x21141b, roughness: 1, metalness: 0, flatShading: true });
+  const crack = new THREE.Group();
+  const crackParts = [
+    { x: 0.05, y: 3.4, z: -214.3, sx: 0.22, sy: 2.6, sz: 0.24, rz: 0.10 },
+    { x: -0.24, y: 2.5, z: -214.0, sx: 0.16, sy: 1.35, sz: 0.18, rz: -0.26 },
+    { x: 0.26, y: 2.6, z: -214.0, sx: 0.16, sy: 1.30, sz: 0.18, rz: 0.24 },
+  ];
+  crackParts.forEach(({ x, y, z, sx, sy, sz, rz }) => {
+    const p = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), crackMat);
+    p.position.set(x, y, z);
+    p.scale.set(sx, sy, sz);
+    p.rotation.x = -0.2;
+    p.rotation.z = rz;
+    crack.add(p);
+  });
+  mountains.add(crack);
+
+  // Faint white glow from inside the crack.
+  const crackGlow = new THREE.PointLight(0xf5f5ff, 1.2, 16, 2);
+  crackGlow.position.set(0.02, 3.1, -214.1);
+  scene.add(crackGlow);
+
+  // Valley altar: two rocks before the last mountain plus surrounding lights.
+  const altarZ = -236;
+  const altarX = 0.2;
+  const altarY = terrainHeight(altarX, altarZ + 180);
+  const altarGroup = new THREE.Group();
+  const altarMat = new THREE.MeshStandardMaterial({ color: 0x8a6c60, flatShading: true, roughness: 1, metalness: 0 });
+  [
+    { x: -0.8, y: 0.52, z: 0.1, sx: 1.05, sy: 1.35, sz: 0.95, ry: 0.4 },
+    { x: 0.75, y: 0.46, z: -0.05, sx: 0.95, sy: 1.2, sz: 1.05, ry: -0.3 },
+  ].forEach(({ x, y, z, sx, sy, sz, ry }) => {
+    const r = new THREE.Mesh(new THREE.IcosahedronGeometry(0.62, 0), altarMat);
+    r.position.set(x, y, z);
+    r.scale.set(sx, sy, sz);
+    r.rotation.y = ry;
+    altarGroup.add(r);
+  });
+  altarGroup.position.set(altarX, altarY, altarZ);
+  scene.add(altarGroup);
+
+  const altarLights = new THREE.Group();
+  const altarLampMat = new THREE.MeshStandardMaterial({
+    color: 0xffe6bf, emissive: 0xffd6a0, emissiveIntensity: 1.5, flatShading: true, roughness: 1,
+  });
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    const rx = altarX + Math.cos(a) * 3.2;
+    const rz = altarZ + Math.sin(a) * 2.2;
+    const ry = terrainHeight(rx, rz + 180);
+    const lamp = new THREE.Mesh(new THREE.IcosahedronGeometry(0.16, 0), altarLampMat);
+    lamp.position.set(rx, ry + 0.42, rz);
+    altarLights.add(lamp);
+    const glow = new THREE.PointLight(0xffd5a8, 0.55, 7, 2);
+    glow.position.set(rx, ry + 0.55, rz);
+    altarLights.add(glow);
+  }
+  scene.add(altarLights);
+
   scene.add(mountains);
+
+  // ===== GLB MODELS =====
+  // Torii gates + guardian statues: near 80% journey toward mountain intersection
+  // Rocks: scattered along the path
+  const TORII_Z   = [-184, -196]; // 2 gates close to the mountain/road convergence
+  const GATE_SCALE   = 16;      // 20% smaller than previous size 20
+  const GATE_X_OFFSET = 0.9;    // slightly right of the road centerline
+  const STATUE_SCALE = 2.52;   // 1.4x bigger than previous 1.8
+  const ROCK_SCALE   = 2.0;  // adjust if model appears too big/small
+
+  const gltfLoader = new GLTFLoader();
+  const loadGLB = (url) => new Promise((resolve, reject) => {
+    gltfLoader.load(url, (g) => resolve(g.scene), undefined, reject);
+  });
+
+  function placeModelOnGround(model, x, z, targetY, yOffset = 0) {
+    model.position.set(x, targetY, z);
+    model.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(model);
+    const lift = targetY - box.min.y;
+    model.position.y += lift + yOffset;
+  }
+
+  loadGLB('/uploads/ToriiGate.glb')
+    .then((proto) => {
+      TORII_Z.forEach((tz) => {
+        const gate = proto.clone(true);
+        gate.scale.setScalar(GATE_SCALE);
+        gate.rotation.y = Math.PI / 4; // 45° anti-clockwise
+        placeModelOnGround(gate, GATE_X_OFFSET, tz, terrainHeight(GATE_X_OFFSET, tz + 180), -0.3);
+        scene.add(gate);
+      });
+    })
+    .catch((err) => {
+      console.warn('Failed to load ToriiGate.glb', err);
+    });
+
+  loadGLB('/uploads/Statue.glb')
+    .then((proto) => {
+      TORII_Z.forEach((tz) => {
+        [[-1, Math.PI / 2], [1, -Math.PI / 2]].forEach(([side, ry]) => {
+          const sx = side * 4.2;
+          const statue = proto.clone(true);
+          statue.rotation.y = ry; // face inward toward road
+          statue.scale.setScalar(STATUE_SCALE);
+          statue.traverse((obj) => {
+            if (!obj.isMesh || !obj.material) return;
+            const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+            mats.forEach((mat) => {
+              if (mat.color) mat.color.lerp(new THREE.Color(0xffffff), 0.35);
+              mat.transparent = false;
+              mat.opacity = 1;
+              if ('metalness' in mat) mat.metalness = 0;
+              if ('roughness' in mat) mat.roughness = 1;
+              if ('envMapIntensity' in mat) mat.envMapIntensity = 0;
+              if (mat.needsUpdate !== undefined) mat.needsUpdate = true;
+            });
+          });
+          placeModelOnGround(statue, sx, tz + 0.5, terrainHeight(sx, tz + 180), -0.22);
+          scene.add(statue);
+        });
+      });
+    })
+    .catch((err) => {
+      console.warn('Failed to load Statue.glb', err);
+    });
+
+  loadGLB('/uploads/Rock.glb')
+    .then((proto) => {
+      [
+        [-5, -22], [8, -38], [-9, -55], [6, -72],
+        [-11, -90], [7, -108], [-6, -128], [10, -150],
+        [-8, -170], [9, -192], [-12, -215], [5, -232],
+      ].forEach(([rx, rz], i) => {
+        const rock = proto.clone(true);
+        const scl = ROCK_SCALE * (0.6 + (i % 4) * 0.25);
+        rock.scale.setScalar(scl);
+        rock.rotation.y = i * 1.37;
+        placeModelOnGround(rock, rx, rz, terrainHeight(rx, rz + 180));
+        scene.add(rock);
+      });
+    })
+    .catch((err) => {
+      console.warn('Failed to load Rock.glb', err);
+    });
 
   // Falling petals
   const PETAL_N = 280;
@@ -447,19 +625,21 @@ window.createScene = function (canvas) {
   const Z_END = -240; // longer journey
 
   let raf;
+  let lastSkyMix = -1;
+  let lastSkyTheme = currentTheme;
   const clock = new THREE.Clock();
   function tick() {
     const dt = Math.min(0.05, clock.getDelta());
     const t = clock.getElapsedTime();
-    state.displayed += (state.progress - state.displayed) * Math.min(1, dt * 6);
-    const p = state.displayed;
+    state.displayed += (state.progress - state.displayed) * Math.min(1, dt * 3.2);
+    const p = smoothstep(state.displayed);
 
     const z = lerp(Z_START, Z_END, p);
-    const camX = Math.sin(p * Math.PI * 1.6) * 0.6;
-    const camY = 1.7 + Math.sin(p * Math.PI * 2.4) * 0.25;
+    const camX = Math.sin(p * Math.PI * 1.25) * 0.35;
+    const camY = 1.7 + Math.sin(p * Math.PI * 1.9) * 0.13;
     camera.position.set(camX, camY, z);
     const lookZ = z - 6;
-    const lookX = Math.sin((p + 0.05) * Math.PI * 1.6) * 0.4;
+    const lookX = Math.sin((p + 0.05) * Math.PI * 1.25) * 0.24;
     camera.lookAt(lookX, 1.5, lookZ);
 
     // Sky / sun follow camera so they're always ahead
@@ -469,9 +649,13 @@ window.createScene = function (canvas) {
 
     // Gradually shift sky color as scroll progresses (max 72% blend)
     const scrollMix = smoothstep(p) * 0.72;
-    const baseStops = currentTheme === 'light' ? dayStops : nightStops;
-    const shiftStops = currentTheme === 'light' ? dayScrolledStops : nightScrolledStops;
-    applySkyColors(blendStops(baseStops, shiftStops, scrollMix));
+    if (Math.abs(scrollMix - lastSkyMix) > 0.003 || lastSkyTheme !== currentTheme) {
+      const baseStops = currentTheme === 'light' ? dayStops : nightStops;
+      const shiftStops = currentTheme === 'light' ? dayScrolledStops : nightScrolledStops;
+      applySkyColors(blendStops(baseStops, shiftStops, scrollMix));
+      lastSkyMix = scrollMix;
+      lastSkyTheme = currentTheme;
+    }
     celestial.position.x = Math.sin(p * Math.PI * 0.5) * 8;
 
     // Petals
@@ -503,8 +687,8 @@ window.createScene = function (canvas) {
   }
 
   function resize() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    const w = canvas.clientWidth || window.innerWidth;
+    const h = canvas.clientHeight || window.innerHeight;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
@@ -523,3 +707,4 @@ window.createScene = function (canvas) {
     },
   };
 };
+window.dispatchEvent(new CustomEvent('scene-ready'));

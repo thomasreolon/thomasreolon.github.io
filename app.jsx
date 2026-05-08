@@ -124,21 +124,54 @@ function tokens(theme) {
 }
 
 // ---------- Scene wiring ----------
-function useScrollScene(canvasRef, theme) {
+function useScrollScene(canvasRef, theme, scrollerRef, mobile) {
   const sceneRef = useRef(null);
+  const triggerRef = useRef(null);
   useEffect(() => {
-    const sc = window.createScene(canvasRef.current);
-    sceneRef.current = sc;
-    gsap.registerPlugin(ScrollTrigger);
+    function init() {
+      if (sceneRef.current) return;
+      const sc = window.createScene(canvasRef.current);
+      sceneRef.current = sc;
+      gsap.registerPlugin(ScrollTrigger);
+    }
+    if (window.createScene) {
+      init();
+    } else {
+      window.addEventListener('scene-ready', init, { once: true });
+    }
+    return () => {
+      window.removeEventListener('scene-ready', init);
+      if (triggerRef.current) {
+        triggerRef.current.kill();
+        triggerRef.current = null;
+      }
+      if (sceneRef.current) {
+        sceneRef.current.dispose();
+        sceneRef.current = null;
+      }
+    };
+  }, []);
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    if (triggerRef.current) {
+      triggerRef.current.kill();
+      triggerRef.current = null;
+    }
     const trigger = ScrollTrigger.create({
       trigger: 'main',
       start: 'top top',
       end: 'bottom bottom',
-      scrub: 0.6,
-      onUpdate: (self) => sc.setProgress(self.progress),
+      scrub: 1.35,
+      scroller: mobile ? scrollerRef.current : undefined,
+      onUpdate: (self) => sceneRef.current && sceneRef.current.setProgress(self.progress),
     });
-    return () => { trigger.kill(); sc.dispose(); };
-  }, []);
+    triggerRef.current = trigger;
+    ScrollTrigger.refresh();
+    return () => {
+      trigger.kill();
+      if (triggerRef.current === trigger) triggerRef.current = null;
+    };
+  }, [mobile, scrollerRef]);
   useEffect(() => {
     if (sceneRef.current) sceneRef.current.setTheme(theme);
   }, [theme]);
@@ -264,11 +297,11 @@ function Hero({ T }) {
     const letters = titleRef.current.querySelectorAll('.hero-letter');
     const targets = Array.from(letters).map((_, i) => {
       const angle = (i * 137.5 * Math.PI) / 180;
-      const dist = 1100 + ((i * 173) % 700);
+      const dist = 560 + ((i * 173) % 300);
       return {
         x: Math.cos(angle) * dist,
-        y: Math.sin(angle) * dist * 0.7 - 60,
-        rot: ((i * 41) % 720) - 360,
+        y: Math.sin(angle) * dist * 0.5 - 30,
+        rot: ((i * 35) % 360) - 180,
       };
     });
 
@@ -276,15 +309,15 @@ function Hero({ T }) {
       scrollTrigger: {
         trigger: heroRef.current,
         start: 'top top',
-        end: '40% top',          // letters are gone within first 40% of hero scroll
-        scrub: 0.25,
+        end: '55% top',
+        scrub: 0.35,
       },
       x: (i) => targets[i].x,
       y: (i) => targets[i].y,
       rotate: (i) => targets[i].rot,
       opacity: 0,
       ease: 'power3.in',
-      stagger: { amount: 0.25, from: 'center' },
+      stagger: { amount: 0.12, from: 'center' },
     });
 
     return () => { tween.scrollTrigger && tween.scrollTrigger.kill(); tween.kill(); };
@@ -338,8 +371,8 @@ function Card({ T, children, className = '' }) {
       style={{
         background: T.cardBg,
         border: '1px solid ' + T.cardBorder,
-        backdropFilter: 'blur(14px)',
-        WebkitBackdropFilter: 'blur(14px)',
+        backdropFilter: 'blur(4px)',
+        WebkitBackdropFilter: 'blur(4px)',
       }}
     >
       {children}
@@ -525,7 +558,8 @@ function App() {
   const [tweaks, setTweak] = useTweaks();
   const T = tokens(tweaks.theme);
   const canvasRef = useRef(null);
-  useScrollScene(canvasRef, tweaks.theme);
+  const scrollContainerRef = useRef(null);
+  useScrollScene(canvasRef, tweaks.theme, scrollContainerRef, tweaks.mobile);
 
   // Apply background color to body so it matches theme during reload/spaces
   useEffect(() => {
@@ -541,7 +575,10 @@ function App() {
       />
       <header
         className="fixed top-0 left-0 right-0 px-6 md:px-16 py-6 flex justify-between items-center"
-        style={{ zIndex: 30 }}
+        style={{
+          zIndex: 30,
+          // background: tweaks.theme === 'dark' ? 'rgba(10,8,18,0.20)' : 'rgba(244,216,184,0.20)',
+        }}
       >
         <span
           className="font-mono text-[12px] tracking-[0.32em] uppercase"
@@ -549,10 +586,10 @@ function App() {
             color: T.heading,
             display: 'inline-block',
             padding: '4px 14px',
-            backdropFilter: 'blur(4px)',
-            WebkitBackdropFilter: 'blur(4px)',
-            maskImage: 'linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%)',
+            backdropFilter: 'blur(2px)',
+            WebkitBackdropFilter: 'blur(2px)',
+            background: tweaks.theme === 'dark' ? 'rgba(10,8,18,0.38)' : 'rgba(255,244,230,0.38)',
+            borderRadius: 999,
           }}
         >
           Thomas Reolon
@@ -590,7 +627,7 @@ function App() {
               background: T.bg,
             }}
           >
-            <div style={{ width: '100%', height: '100%', overflow: 'auto', position: 'relative' }}>
+            <div ref={scrollContainerRef} style={{ width: '100%', height: '100%', overflow: 'auto', position: 'relative' }}>
               {inner}
             </div>
           </div>
