@@ -1,29 +1,28 @@
-# DD Portfolio
+# My Portfolio
 
-A fast, interactive 3D portfolio experience built for showing work with style.
+My portfolio site where I'll link useful projects and other stuff. Also, I tried to make it look cool.
 
-## Screenshot
+you can see it at [thomasreolon.github.io](https://thomasreolon.github.io)
 
-> Placeholder: add a homepage screenshot here
+## Preview
 
-![Portfolio Screenshot](./docs/screenshot-placeholder.png)
+![Portfolio Screenshot](./screenshot.png)
 
-## Perks
+## Highlights
 
-- Immersive 3D scene that makes projects feel alive
-- Lightweight setup and quick local startup
-- Easy to customize assets, visuals, and content
-- Clean structure for rapid iteration and experiments
-- Deploy-friendly static web stack
+- Immersive real-time 3D scene for engaging project presentation 🎯
+- Lightweight local setup for fast development loops ⚡
+- Static-web friendly structure for straightforward deployment 🚀
 
-## Quick Start
+## Tech Stack
+
+- JavaScript
+- WebGL / 3D rendering workflow
+- Modern frontend tooling
+
+## Getting Started
 
 ```bash
-# from the project root
 npm install
 npm run dev
 ```
-
-## Tech Vibe
-
-JavaScript, WebGL/3D rendering, modern frontend workflow.
