@@ -688,7 +688,7 @@ function App() {
             borderRadius: 999,
           }}
         >
-          Thomas Reolon
+          PORTFOLIO
         </span>
         <div className="flex items-center gap-2">
           <LangToggle lang={lang} onChange={setLang} T={T} />

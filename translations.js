@@ -7,7 +7,6 @@ export function i18n(lang) {
           { id: 'finance', label: 'Finance' },
           { id: 'ai', label: 'Machine Learning' },
           { id: 'real-estate', label: 'Real Estate' },
-          { id: 'contact', label: 'Contact' },
         ],
       },
       hero: {
@@ -64,7 +63,6 @@ export function i18n(lang) {
           { id: 'finance', label: 'Finanza' },
           { id: 'ai', label: 'Machine Learning' },
           { id: 'real-estate', label: 'Immobiliare' },
-          { id: 'contact', label: 'Contatti' },
         ],
       },
       hero: {
