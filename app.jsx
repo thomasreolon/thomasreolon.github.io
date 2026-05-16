@@ -312,15 +312,15 @@ function Hero({ T, L }) {
       scrollTrigger: {
         trigger: heroRef.current,
         start: 'top top',
-        end: '55% top',
-        scrub: 0.35,
+        end: '48% top',
+        scrub: 0.3,
       },
       x: (i) => targets[i].x,
       y: (i) => targets[i].y,
       rotate: (i) => targets[i].rot,
       opacity: 0,
-      ease: 'power3.in',
-      stagger: { amount: 0.12, from: 'center' },
+      ease: 'power2.out',
+      stagger: { amount: 0.1, from: 'center' },
     });
 
     return () => { tween.scrollTrigger && tween.scrollTrigger.kill(); tween.kill(); };
@@ -341,7 +341,7 @@ function Hero({ T, L }) {
         </p>
         <h1
           ref={titleRef}
-          className="font-display text-[18vw] md:text-[16vw] leading-[0.85] tracking-tight select-none"
+          className="font-display text-[18vw] md:text-[clamp(6rem,12vw,11.5rem)] leading-[0.85] tracking-tight select-none"
           style={{ wordSpacing: '0.05em' }}
         >
           <div className="block"><SplitLetters text="THOMAS" color={T.titleHero} shadow={T.titleHeroShadow} filter={T.titleHeroFilter} /></div>
