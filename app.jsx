@@ -365,120 +365,190 @@ function ChapterMarker({ index, label, T }) {
   );
 }
 
-function RealEstate({ T }) {
+function ProjectTile({ T, index, title, blurb, href }) {
   return (
-    <section
-      id="real-estate"
-      data-screen-label="02 Real Estate"
-      className="min-h-screen px-6 md:px-16 py-32 flex items-center"
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="group block relative overflow-hidden transition-transform duration-300 hover:-translate-y-0.5"
+      style={{
+        background: T.cardBg,
+        border: '1px solid ' + T.cardBorder,
+        borderRadius: 14,
+        backdropFilter: 'blur(4px)',
+        WebkitBackdropFilter: 'blur(4px)',
+      }}
     >
-      <div className="max-w-3xl ml-auto w-full">
-        <Card T={T}>
-          <ChapterMarker index={1} label="Real Estate" T={T} />
-          <h2
-            className="mt-8 font-display text-4xl md:text-5xl leading-[0.95]"
+      <span
+        className="absolute left-0 top-0 bottom-0 w-[3px] origin-bottom scale-y-0 group-hover:scale-y-100 transition-transform duration-500"
+        style={{ background: T.heading }}
+      />
+      <div className="px-6 md:px-8 py-6 flex items-center gap-6">
+        <div
+          className="font-mono text-[11px] tracking-[0.3em] uppercase shrink-0"
+          style={{ color: T.muted }}
+        >
+          {String(index).padStart(2, '0')}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div
+            className="font-display text-2xl md:text-3xl leading-tight"
             style={{ color: T.heading }}
           >
-            Listings, leases &amp; the long view.
-          </h2>
-          <p className="mt-8 text-xl leading-relaxed" style={{ color: T.body }}>
-            Six years building search, valuation and transaction tooling for residential
-            and commercial brokerages. From comp-pulling pipelines that ingest a million
-            MLS rows a night, to closing-room workflows that survived a real audit.
-          </p>
-          <dl className="mt-10 space-y-7">
-            {[
-              ['MLS ingestion & dedup', 'A pipeline that reconciles overlapping feeds from twelve regional boards into one canonical record per property.'],
-              ['Automated valuation', 'Gradient-boosted comp models with confidence intervals — used by underwriters who actually trust them.'],
-              ['Closing workflows', 'Document automation for transactions where one missing initial costs a week.'],
-            ].map(([k, v]) => (
-              <div key={k}>
-                <dt className="font-display text-2xl md:text-3xl" style={{ color: T.heading }}>{k}</dt>
-                <dd className="mt-2 text-base md:text-lg leading-relaxed" style={{ color: T.body }}>{v}</dd>
-              </div>
-            ))}
-          </dl>
-        </Card>
+            {title}
+          </div>
+          <div
+            className="mt-1.5 text-sm md:text-base leading-snug"
+            style={{ color: T.body }}
+          >
+            {blurb}
+          </div>
+          <div
+            className="mt-3 font-mono text-[11px] tracking-wider truncate opacity-60 group-hover:opacity-100 transition-opacity"
+            style={{ color: T.mono }}
+          >
+            {href.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+          </div>
+        </div>
+        <div
+          className="shrink-0 font-display text-3xl md:text-4xl transition-transform duration-300 group-hover:translate-x-1.5"
+          style={{ color: T.heading }}
+          aria-hidden
+        >
+          →
+        </div>
       </div>
-    </section>
+    </a>
+  );
+}
+
+function PlaceholderPanel({ T, chapterIndex, chapterLabel, teaser }) {
+  return (
+    <Card T={T}>
+      <ChapterMarker index={chapterIndex} label={chapterLabel} T={T} />
+      <div className="mt-8 flex items-center gap-3">
+        <span
+          className="inline-block w-1.5 h-1.5 rounded-full animate-pulse"
+          style={{ background: T.heading }}
+          aria-hidden
+        />
+        <span
+          className="font-mono text-[11px] uppercase tracking-[0.3em]"
+          style={{ color: T.muted }}
+        >
+          Work in progress
+        </span>
+      </div>
+      <h2
+        className="mt-6 font-display text-4xl md:text-5xl leading-[0.95]"
+        style={{ color: T.heading }}
+      >
+        Chapter under construction.
+      </h2>
+      <p className="mt-6 text-lg md:text-xl leading-relaxed" style={{ color: T.body }}>
+        {teaser}
+      </p>
+      <div
+        className="mt-10 pt-6 flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.3em]"
+        style={{ borderTop: '1px solid ' + T.cardBorder, color: T.muted }}
+      >
+        <span>Drafting</span>
+        <span>2026</span>
+      </div>
+    </Card>
   );
 }
 
 function Finance({ T }) {
+  const softBg = T.cardBg.replace(/[\d.]+\)$/, (m) => (parseFloat(m) * 0.8).toFixed(3) + ')');
   return (
     <section
       id="finance"
-      data-screen-label="03 Finance"
+      data-screen-label="02 Finance"
       className="min-h-screen px-6 md:px-16 py-32 flex items-center"
     >
-      <div className="max-w-3xl w-full">
-        <Card T={T}>
-          <ChapterMarker index={2} label="Finance" T={T} />
-          <h2
-            className="mt-8 font-display text-4xl md:text-5xl leading-[0.95]"
-            style={{ color: T.heading }}
-          >
-            Numbers that have to be right.
-          </h2>
-          <p className="mt-8 text-xl leading-relaxed" style={{ color: T.body }}>
-            Trading infrastructure, settlement systems and the unglamorous reconciliation
-            jobs that run at 4am. Comfortable with low-latency event flows, eventual
-            consistency, and the kind of testing where a single bad tick is a Monday
-            morning meeting.
-          </p>
-          <div className="mt-10 space-y-8">
-            {[
-              ['$1.4B', 'in daily volume routed through systems I built'],
-              ['11ms', 'p99 quote latency on the public market data API'],
-              ['Zero', 'settlement breaks YTD across reconciled venues'],
-            ].map(([n, l]) => (
-              <div
-                key={l}
-                className="flex items-baseline gap-6 pt-6"
-                style={{ borderTop: '1px solid ' + T.cardBorder }}
-              >
-                <div className="font-display text-5xl md:text-7xl leading-none" style={{ color: T.heading }}>{n}</div>
-                <div className="text-base md:text-lg max-w-xs leading-snug" style={{ color: T.body }}>{l}</div>
-              </div>
-            ))}
+      <div className="max-w-3xl ml-auto w-full">
+        <div
+          className="rounded-2xl p-8 md:p-10"
+          style={{
+            background: softBg,
+            border: '1px solid ' + T.cardBorder,
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+          }}
+        >
+          <ChapterMarker index={1} label="Finance" T={T} />
+          <div className="mt-8 space-y-4">
+            <ProjectTile
+              T={T}
+              index={1}
+              title="Daily market journal"
+              blurb="Markets react to macro prints, earnings calls and geopolitics faster than anyone can read everything. A one-page daily digest of the signals that actually moved things, with the key macro indicators alongside."
+              href="https://report-server-rz3teebbga-ew.a.run.app/"
+            />
+            <ProjectTile
+              T={T}
+              index={2}
+              title="Return prediction"
+              blurb="If today's price already contains tomorrow's, no model should work. Trained on thirty years of equities anyway: returns stay mostly unpredictable — but a few faint signals survive, and you can see how each feature tilts a single stock."
+              href="https://ff-analysis-6489314693.europe-west1.run.app/"
+            />
           </div>
-        </Card>
+        </div>
       </div>
     </section>
   );
 }
 
 function AISection({ T }) {
+  const softBg = T.cardBg.replace(/[\d.]+\)$/, (m) => (parseFloat(m) * 0.8).toFixed(3) + ')');
   return (
     <section
       id="ai"
-      data-screen-label="04 AI"
+      data-screen-label="03 Machine Learning"
+      className="min-h-screen px-6 md:px-16 py-32 flex items-center"
+    >
+      <div className="max-w-3xl w-full">
+        <div
+          className="rounded-2xl p-8 md:p-10"
+          style={{
+            background: softBg,
+            border: '1px solid ' + T.cardBorder,
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+          }}
+        >
+          <ChapterMarker index={2} label="Machine Learning" T={T} />
+          <div className="mt-8 space-y-4">
+            <ProjectTile
+              T={T}
+              index={1}
+              title="Object detection on binary motion frames"
+              blurb="A YOLO-inspired detector built for binary motion frames rather than RGB. The interesting parts lived in the seams: quantizing the network to run at the edge, neural architecture search over the topology, and getting useful gradients through a non-differentiable preprocessor whose discrete parameters fed those binary frames into the net."
+              href="https://github.com/thomasreolon/UNITN-master-thesis/blob/main/report.pdf"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function RealEstate({ T }) {
+  return (
+    <section
+      id="real-estate"
+      data-screen-label="04 Real Estate"
       className="min-h-screen px-6 md:px-16 py-32 flex items-center"
     >
       <div className="max-w-3xl ml-auto w-full">
-        <Card T={T}>
-          <ChapterMarker index={3} label="Machine Learning" T={T} />
-          <h2
-            className="mt-8 font-display text-4xl md:text-5xl leading-[0.95]"
-            style={{ color: T.heading }}
-          >
-            Models that earn their place.
-          </h2>
-          <p className="mt-8 text-xl leading-relaxed" style={{ color: T.body }}>
-            Applied ML for the boring, valuable problems — fraud signals, document
-            extraction, risk scoring, retrieval over messy private data. I prefer small
-            models that ship, evaluation harnesses that hurt, and humans in the loop
-            where they belong.
-          </p>
-          <div className="mt-10 pt-8" style={{ borderTop: '1px solid ' + T.cardBorder }}>
-            <p className="font-mono text-[13px] uppercase tracking-[0.3em] mb-4" style={{ color: T.muted }}>Currently</p>
-            <p className="font-display text-2xl md:text-3xl leading-snug" style={{ color: T.heading }}>
-              Building retrieval and agent infrastructure for a private credit fund —
-              ingesting forty years of deal memos and turning them into something analysts
-              actually use.
-            </p>
-          </div>
-        </Card>
+        <PlaceholderPanel
+          T={T}
+          chapterIndex={3}
+          chapterLabel="Real Estate"
+          teaser="A chapter still being written — pipelines, valuation work, and the unglamorous transaction tooling that lives behind a closing. Check back."
+        />
       </div>
     </section>
   );
@@ -585,9 +655,9 @@ function App() {
       </header>
       <main className="relative" style={{ zIndex: 1, opacity: SCENE_ONLY_REVIEW ? 0 : 1, pointerEvents: SCENE_ONLY_REVIEW ? 'none' : 'auto' }}>
         <Hero T={T} />
-        <RealEstate T={T} />
         <Finance T={T} />
         <AISection T={T} />
+        <RealEstate T={T} />
         <Contact T={T} />
       </main>
       </>
