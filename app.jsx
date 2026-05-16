@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { tokens } from './themeTokens.js';
+import { i18n } from './translations.js';
 
 // Thomas Reolon portfolio - theme-aware, mobile preview, projects menu, tweaks
 
@@ -187,15 +188,42 @@ function ThemeToggle({ theme, onToggle, T }) {
   );
 }
 
-// ---------- Projects nav (top right) ----------
-const PROJECTS = [
-  { id: 'real-estate', label: 'Real Estate' },
-  { id: 'finance', label: 'Finance' },
-  { id: 'ai', label: 'Machine Learning' },
-  { id: 'contact', label: 'Contact' },
-];
+// ---------- Language toggle ----------
+function LangToggle({ lang, onChange, T }) {
+  return (
+    <div
+      className="flex items-center font-mono text-[11px] tracking-[0.25em] rounded-full overflow-hidden h-9"
+      style={{
+        background: T.cardBg,
+        border: '1px solid ' + T.cardBorder,
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      }}
+    >
+      {['en', 'it'].map((l) => {
+        const active = lang === l;
+        return (
+          <button
+            key={l}
+            onClick={() => onChange(l)}
+            aria-label={'Switch to ' + l.toUpperCase()}
+            className="px-2.5 h-full transition"
+            style={{
+              background: active ? T.heading : 'transparent',
+              color: active ? T.bg : T.heading,
+              opacity: active ? 1 : 0.65,
+            }}
+          >
+            {l.toUpperCase()}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
-function ProjectsMenu({ T }) {
+// ---------- Projects nav (top right) ----------
+function ProjectsMenu({ T, L }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="relative">
@@ -210,7 +238,7 @@ function ProjectsMenu({ T }) {
         }}
       >
         {/* hamburger on mobile, text+arrow on md+ */}
-        <span className="hidden md:inline">Projects</span>
+        <span className="hidden md:inline">{L.nav.projects}</span>
         <span className="hidden md:inline" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▾</span>
         <span className="md:hidden" style={{ fontSize: 18, lineHeight: 1 }}>☰</span>
       </button>
@@ -223,7 +251,7 @@ function ProjectsMenu({ T }) {
             backdropFilter: 'blur(12px)',
           }}
         >
-          {PROJECTS.map((p, i) => (
+          {L.nav.items.map((p, i) => (
             <a
               key={p.id}
               href={'#' + p.id}
@@ -262,7 +290,7 @@ function SplitLetters({ text, color, shadow, filter }) {
   );
 }
 
-function Hero({ T }) {
+function Hero({ T, L }) {
   const heroRef = useRef(null);
   const titleRef = useRef(null);
 
@@ -309,7 +337,7 @@ function Hero({ T }) {
           className="font-mono text-[13px] tracking-[0.3em] uppercase mb-10"
           style={{ color: T.muted }}
         >
-          AI · Software Development · Machine Learning
+          {L.hero.eyebrow}
         </p>
         <h1
           ref={titleRef}
@@ -323,7 +351,7 @@ function Hero({ T }) {
           className="mt-12 max-w-xl text-xl md:text-2xl leading-relaxed"
           style={{ color: T.body }}
         >
-          <span style={{ color: '#ffffff' }}>Helping companies reach results with math and code.</span>
+          <span style={{ color: '#ffffff' }}>{L.hero.subtitle}</span>
         </p>
       </div>
 
@@ -331,7 +359,7 @@ function Hero({ T }) {
         className="flex justify-between items-end text-[12px] tracking-[0.32em] uppercase"
         style={{ color: T.muted }}
       >
-        <span style={{ color: '#ffffff' }}>Scroll to wander</span>
+        <span style={{ color: '#ffffff' }}>{L.hero.scroll}</span>
         <span className="font-mono" style={{ color: '#ffffff' }}>↓</span>
       </footer>
     </section>
@@ -355,10 +383,10 @@ function Card({ T, children, className = '' }) {
   );
 }
 
-function ChapterMarker({ index, label, T }) {
+function ChapterMarker({ index, label, T, L }) {
   return (
     <div className="flex items-center gap-5 text-[13px] tracking-[0.3em] uppercase" style={{ color: T.muted }}>
-      <span className="font-mono">Ch. {String(index).padStart(2, '0')}</span>
+      <span className="font-mono">{L.chapterPrefix} {String(index).padStart(2, '0')}</span>
       <span className="h-px w-16" style={{ background: T.muted, opacity: 0.4 }} />
       <span>{label}</span>
     </div>
@@ -423,10 +451,10 @@ function ProjectTile({ T, index, title, blurb, href }) {
   );
 }
 
-function PlaceholderPanel({ T, chapterIndex, chapterLabel, teaser }) {
+function PlaceholderPanel({ T, L, chapterIndex, chapterLabel, teaser }) {
   return (
     <Card T={T}>
-      <ChapterMarker index={chapterIndex} label={chapterLabel} T={T} />
+      <ChapterMarker index={chapterIndex} label={chapterLabel} T={T} L={L} />
       <div className="mt-8 flex items-center gap-3">
         <span
           className="inline-block w-1.5 h-1.5 rounded-full animate-pulse"
@@ -437,14 +465,14 @@ function PlaceholderPanel({ T, chapterIndex, chapterLabel, teaser }) {
           className="font-mono text-[11px] uppercase tracking-[0.3em]"
           style={{ color: T.muted }}
         >
-          Work in progress
+          {L.placeholder.status}
         </span>
       </div>
       <h2
         className="mt-6 font-display text-4xl md:text-5xl leading-[0.95]"
         style={{ color: T.heading }}
       >
-        Chapter under construction.
+        {L.placeholder.heading}
       </h2>
       <p className="mt-6 text-lg md:text-xl leading-relaxed" style={{ color: T.body }}>
         {teaser}
@@ -453,14 +481,14 @@ function PlaceholderPanel({ T, chapterIndex, chapterLabel, teaser }) {
         className="mt-10 pt-6 flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.3em]"
         style={{ borderTop: '1px solid ' + T.cardBorder, color: T.muted }}
       >
-        <span>Drafting</span>
-        <span>2026</span>
+        <span>{L.placeholder.leftLabel}</span>
+        <span>{L.placeholder.rightLabel}</span>
       </div>
     </Card>
   );
 }
 
-function Finance({ T }) {
+function Finance({ T, L }) {
   const softBg = T.cardBg.replace(/[\d.]+\)$/, (m) => (parseFloat(m) * 0.8).toFixed(3) + ')');
   return (
     <section
@@ -478,20 +506,20 @@ function Finance({ T }) {
             WebkitBackdropFilter: 'blur(4px)',
           }}
         >
-          <ChapterMarker index={1} label="Finance" T={T} />
+          <ChapterMarker index={1} label={L.chapters.finance} T={T} L={L} />
           <div className="mt-8 space-y-4">
             <ProjectTile
               T={T}
               index={1}
-              title="Daily market journal"
-              blurb="Markets react to macro prints, earnings calls and geopolitics faster than anyone can read everything. A one-page daily digest of the signals that actually moved things, with the key macro indicators alongside."
+              title={L.finance.project1.title}
+              blurb={L.finance.project1.blurb}
               href="https://report-server-rz3teebbga-ew.a.run.app/"
             />
             <ProjectTile
               T={T}
               index={2}
-              title="Return prediction"
-              blurb="If today's price already contains tomorrow's, no model should work. Trained on thirty years of equities anyway: returns stay mostly unpredictable — but a few faint signals survive, and you can see how each feature tilts a single stock."
+              title={L.finance.project2.title}
+              blurb={L.finance.project2.blurb}
               href="https://ff-analysis-6489314693.europe-west1.run.app/"
             />
           </div>
@@ -501,7 +529,7 @@ function Finance({ T }) {
   );
 }
 
-function AISection({ T }) {
+function AISection({ T, L }) {
   const softBg = T.cardBg.replace(/[\d.]+\)$/, (m) => (parseFloat(m) * 0.8).toFixed(3) + ')');
   return (
     <section
@@ -519,13 +547,13 @@ function AISection({ T }) {
             WebkitBackdropFilter: 'blur(4px)',
           }}
         >
-          <ChapterMarker index={2} label="Machine Learning" T={T} />
+          <ChapterMarker index={2} label={L.chapters.ai} T={T} L={L} />
           <div className="mt-8 space-y-4">
             <ProjectTile
               T={T}
               index={1}
-              title="Object detection on binary motion frames"
-              blurb="A YOLO-inspired detector built for binary motion frames rather than RGB. The interesting parts lived in the seams: quantizing the network to run at the edge, neural architecture search over the topology, and getting useful gradients through a non-differentiable preprocessor whose discrete parameters fed those binary frames into the net."
+              title={L.ai.project1.title}
+              blurb={L.ai.project1.blurb}
               href="https://github.com/thomasreolon/UNITN-master-thesis/blob/main/report.pdf"
             />
           </div>
@@ -535,7 +563,7 @@ function AISection({ T }) {
   );
 }
 
-function RealEstate({ T }) {
+function RealEstate({ T, L }) {
   return (
     <section
       id="real-estate"
@@ -545,16 +573,17 @@ function RealEstate({ T }) {
       <div className="max-w-3xl ml-auto w-full">
         <PlaceholderPanel
           T={T}
+          L={L}
           chapterIndex={3}
-          chapterLabel="Real Estate"
-          teaser="A chapter still being written — pipelines, valuation work, and the unglamorous transaction tooling that lives behind a closing. Check back."
+          chapterLabel={L.chapters.realEstate}
+          teaser={L.realEstate.teaser}
         />
       </div>
     </section>
   );
 }
 
-function Contact({ T }) {
+function Contact({ T, L }) {
   return (
     <section
       id="contact"
@@ -566,16 +595,16 @@ function Contact({ T }) {
           className="mt-10 mb-14 max-w-md font-display text-2xl md:text-3xl leading-snug"
           style={{ color: '#ffffff', textShadow: '0 1px 10px rgba(0,0,0,0.50)' }}
         >
-          Contacts on the altar.
+          {L.contact.altarText}
         </p>
       </div>
       <footer
         className="flex justify-between items-end text-[12px] tracking-[0.32em] uppercase mt-12"
         style={{ color: T.muted }}
       >
-        <span style={{ color: '#ffffff' }}>© 2026 Thomas Reolon</span>
+        <span style={{ color: '#ffffff' }}>{L.contact.copyright}</span>
         <span className="relative group font-mono cursor-help select-none">
-          CREDITS
+          {L.contact.credits}
           <span
             className="absolute bottom-full right-0 mb-2 w-[320px] rounded-lg px-3 py-2 text-[11px] normal-case tracking-normal leading-relaxed opacity-0 pointer-events-none transition-opacity duration-200 group-hover:opacity-100"
             style={{
@@ -586,11 +615,12 @@ function Contact({ T }) {
               WebkitBackdropFilter: 'blur(8px)',
             }}
           >
-            Rock by Danni Bittman [CC-BY] via Poly Pizza
-            <br />
-            Torii Gate by Hattie Stroud [CC-BY] via Poly Pizza
-            <br />
-            Statue by Zsky [CC-BY] via Poly Pizza
+            {L.contact.creditsBody.map((line, i) => (
+              <span key={i}>
+                {line}
+                {i < L.contact.creditsBody.length - 1 && <br />}
+              </span>
+            ))}
           </span>
         </span>
       </footer>
@@ -602,6 +632,18 @@ function App() {
   const SCENE_ONLY_REVIEW = false;
   const [tweaks, setTweak] = useTweaks();
   const T = tokens(tweaks.theme);
+  const [lang, setLang] = useState(() => {
+    try {
+      const stored = localStorage.getItem('lang');
+      if (stored === 'en' || stored === 'it') return stored;
+      if (typeof navigator !== 'undefined' && navigator.language && navigator.language.toLowerCase().startsWith('it')) return 'it';
+    } catch (_) {}
+    return 'en';
+  });
+  useEffect(() => {
+    try { localStorage.setItem('lang', lang); } catch (_) {}
+  }, [lang]);
+  const L = i18n(lang);
   const canvasRef = useRef(null);
   const scrollContainerRef = useRef(null);
   useScrollScene(canvasRef, tweaks.theme, scrollContainerRef, tweaks.mobile);
@@ -649,16 +691,17 @@ function App() {
           Thomas Reolon
         </span>
         <div className="flex items-center gap-2">
+          <LangToggle lang={lang} onChange={setLang} T={T} />
           <ThemeToggle theme={tweaks.theme} onToggle={() => setTweak('theme', tweaks.theme === 'dark' ? 'light' : 'dark')} T={T} />
-          <ProjectsMenu T={T} />
+          <ProjectsMenu T={T} L={L} />
         </div>
       </header>
       <main className="relative" style={{ zIndex: 1, opacity: SCENE_ONLY_REVIEW ? 0 : 1, pointerEvents: SCENE_ONLY_REVIEW ? 'none' : 'auto' }}>
-        <Hero T={T} />
-        <Finance T={T} />
-        <AISection T={T} />
-        <RealEstate T={T} />
-        <Contact T={T} />
+        <Hero T={T} L={L} />
+        <Finance T={T} L={L} />
+        <AISection T={T} L={L} />
+        <RealEstate T={T} L={L} />
+        <Contact T={T} L={L} />
       </main>
       </>
     </>
