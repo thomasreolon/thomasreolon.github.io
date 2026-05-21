@@ -620,10 +620,55 @@ function Contact({ T, L }) {
   );
 }
 
+function LinksPopup({ T, onClose }) {
+  const links = [
+    { label: 'LinkedIn',  icon: 'in', href: 'https://www.linkedin.com/in/thomas-reolon-9270971a3' },
+    { label: 'GitHub',    icon: '</>',href: 'https://github.com/thomasreolon' },
+    { label: 'CV & Docs', icon: '↓',  href: 'https://drive.google.com/drive/folders/1K-3m9gpXWkoQowV_7onFJv20afQ1rr78?usp=drive_link' },
+  ];
+  return (
+    <div
+      data-altar-overlay
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ zIndex: 50, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+      onClick={onClose}
+    >
+      <div
+        className="relative rounded-2xl p-8 w-[320px]"
+        style={{ background: T.cardBg, border: '1px solid ' + T.cardBorder, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 font-mono text-[18px] leading-none opacity-50 hover:opacity-100 transition"
+          style={{ color: T.heading }}
+        >×</button>
+        <p className="font-mono text-[11px] uppercase tracking-[0.3em] mb-6" style={{ color: T.muted }}>Links</p>
+        <div className="grid grid-cols-2 gap-3">
+          {links.map(({ label, icon, href }) => (
+            <a
+              key={label}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col items-center gap-2 rounded-xl py-5 px-3 transition hover:scale-[1.04]"
+              style={{ background: T.cardBg, border: '1px solid ' + T.cardBorder, color: T.heading, textDecoration: 'none' }}
+            >
+              <span className="font-mono text-[22px]">{icon}</span>
+              <span className="font-mono text-[11px] uppercase tracking-[0.25em]" style={{ color: T.muted }}>{label}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const SCENE_ONLY_REVIEW = false;
   const [tweaks, setTweak] = useTweaks();
   const T = tokens(tweaks.theme);
+  const [showLinksPopup, setShowLinksPopup] = useState(false);
   const [lang, setLang] = useState(() => {
     try {
       const stored = localStorage.getItem('lang');
@@ -651,6 +696,12 @@ function App() {
     window.addEventListener('altar-theme-toggle', onToggle);
     return () => window.removeEventListener('altar-theme-toggle', onToggle);
   }, [tweaks.theme]);
+
+  useEffect(() => {
+    const onOpen = () => setShowLinksPopup(true);
+    window.addEventListener('altar-links-popup', onOpen);
+    return () => window.removeEventListener('altar-links-popup', onOpen);
+  }, []);
 
   const inner = (
     <>
@@ -726,6 +777,7 @@ function App() {
         inner
       )}
       {!SCENE_ONLY_REVIEW && <TweaksPanel tweaks={tweaks} setTweak={setTweak} theme={tweaks.theme} />}
+      {showLinksPopup && <LinksPopup T={T} onClose={() => setShowLinksPopup(false)} />}
     </>
   );
 }

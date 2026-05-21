@@ -558,6 +558,9 @@ export function createScene(canvas) {
   const recessTex = new THREE.CanvasTexture(recessCv);
   recessTex.colorSpace = THREE.SRGBColorSpace;
   const recessMat = new THREE.MeshStandardMaterial({ map: recessTex, roughness: 1, metalness: 0, transparent: true, depthWrite: false });
+  // Two-pass corona: fill with a wide blurred shadow to generate the halo, then
+  // punch out the solid interior with destination-out — leaving only the soft
+  // glow radiating outward from the symbol edge.
   function makeIconTexture(symbol, accent) {
     const cv = document.createElement('canvas');
     cv.width = cv.height = 256;
@@ -566,25 +569,16 @@ export function createScene(canvas) {
     ctx.font = 'bold 190px Georgia, serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    // Wide halo
     ctx.shadowColor = accent;
-    ctx.shadowBlur = 44;
-    ctx.lineWidth = 26;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = accent;
-    ctx.strokeText(symbol, 128, 140);
-    // Sharp coloured core
-    ctx.shadowBlur = 18;
-    ctx.fillStyle = accent;
-    ctx.fillText(symbol, 128, 140);
-    // Bright highlight on top so the rune still reads against bright sky
-    ctx.shadowBlur = 0;
+    ctx.shadowBlur = 58;
     ctx.fillStyle = '#ffffff';
-    ctx.globalAlpha = 0.85;
-    ctx.font = 'bold 160px Georgia, serif';
     ctx.fillText(symbol, 128, 140);
-    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 28;
+    ctx.fillText(symbol, 128, 140);
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.shadowBlur = 0;
+    ctx.fillText(symbol, 128, 140);
+    ctx.globalCompositeOperation = 'source-over';
     const tex = new THREE.CanvasTexture(cv);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
@@ -596,24 +590,22 @@ export function createScene(canvas) {
     cv.width = cv.height = 256;
     const ctx = cv.getContext('2d');
     ctx.clearRect(0, 0, 256, 256);
-    // Build the crescent on an offscreen canvas first.
     const off = document.createElement('canvas');
     off.width = off.height = 256;
     const oc = off.getContext('2d');
     oc.fillStyle = '#ffffff';
-    oc.beginPath();
-    oc.arc(118, 132, 78, 0, Math.PI * 2);
-    oc.fill();
+    oc.beginPath(); oc.arc(118, 132, 78, 0, Math.PI * 2); oc.fill();
     oc.globalCompositeOperation = 'destination-out';
-    oc.beginPath();
-    oc.arc(160, 116, 70, 0, Math.PI * 2);
-    oc.fill();
-    // Composite onto main canvas with glow halo, then sharper on top.
+    oc.beginPath(); oc.arc(160, 116, 70, 0, Math.PI * 2); oc.fill();
     ctx.shadowColor = accent;
-    ctx.shadowBlur = 38;
+    ctx.shadowBlur = 58;
     ctx.drawImage(off, 0, 0);
-    ctx.shadowBlur = 14;
+    ctx.shadowBlur = 28;
     ctx.drawImage(off, 0, 0);
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.shadowBlur = 0;
+    ctx.drawImage(off, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
     const tex = new THREE.CanvasTexture(cv);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
@@ -621,15 +613,16 @@ export function createScene(canvas) {
   }
 
   const interactiveIcons = [];
+  const glowRunes = [];
 
   // Two main rune planes — sized large with bright accent fill so they read clearly.
   const RUNE_Y_OFFSET = -0.35; // push all altar runes slightly lower to avoid UI overlap
   const MAIN_RUNE_SCALE = 0.8; // 20% smaller
   const MAIN_RUNE_X_OFFSET = -0.14; // shifted left for better composition
   [
-    { sym: '@',  y: 3.10, link: 'mailto:thomas.reolon.it@gmail.com',                 emissive: 0xffd5a8, accent: '#ffd5a8', label: 'Email' },
-    { sym: 'in', y: 2.05, link: 'https://www.linkedin.com/in/thomas-reolon-9270971a3', emissive: 0x9ec0ff, accent: '#9ec0ff', label: 'LinkedIn' },
-  ].forEach(({ sym, y, link, emissive, accent, label }) => {
+    { sym: 'moon', y: 3.10, action: 'toggleTheme',   emissive: 0xb03a1a, accent: '#b03a1a', label: 'Theme', glowPhase: 0   },
+    { sym: '→',   y: 2.05, action: 'openLinksPopup', emissive: 0xb03a1a, accent: '#b03a1a', label: 'Links', glowPhase: 2.1 },
+  ].forEach(({ sym, y, action, emissive, accent, label, glowPhase }) => {
     const runeY = y + RUNE_Y_OFFSET;
     const frontZ = steleRadiusAt(runeY) + 0.03;
     const recess = new THREE.Mesh(new THREE.CircleGeometry(0.5, 24), recessMat);
@@ -637,13 +630,25 @@ export function createScene(canvas) {
     recess.scale.setScalar(MAIN_RUNE_SCALE);
     altarGroup.add(recess);
 
-    const tex = makeIconTexture(sym, accent);
+    const tex = sym === 'moon' ? makeMoonTexture(accent) : makeIconTexture(sym, accent);
     const dCv = document.createElement('canvas'); dCv.width = dCv.height = 256;
     const dCtx = dCv.getContext('2d');
     dCtx.clearRect(0, 0, 256, 256);
-    dCtx.font = 'bold 190px Georgia, serif';
-    dCtx.textAlign = 'center'; dCtx.textBaseline = 'middle';
-    dCtx.fillStyle = 'rgba(20,12,8,0.72)'; dCtx.fillText(sym, 128, 140);
+    // Warm dark-brown carved fill — identical for both runes so the symbols
+    // look made of the same stone, with a subtle vertical gradient for depth.
+    const fillGrad = dCtx.createLinearGradient(0, 60, 0, 220);
+    fillGrad.addColorStop(0, 'rgba(38, 18, 6, 0.94)');
+    fillGrad.addColorStop(1, 'rgba(16,  8, 3, 0.94)');
+    dCtx.fillStyle = fillGrad;
+    if (sym === 'moon') {
+      dCtx.beginPath(); dCtx.arc(118, 132, 78, 0, Math.PI * 2); dCtx.fill();
+      dCtx.globalCompositeOperation = 'destination-out';
+      dCtx.beginPath(); dCtx.arc(160, 116, 70, 0, Math.PI * 2); dCtx.fill();
+    } else {
+      dCtx.font = 'bold 190px Georgia, serif';
+      dCtx.textAlign = 'center'; dCtx.textBaseline = 'middle';
+      dCtx.fillText(sym, 128, 140);
+    }
     const darkTex = new THREE.CanvasTexture(dCv);
     darkTex.colorSpace = THREE.SRGBColorSpace; darkTex.anisotropy = 4;
     const mat = new THREE.MeshStandardMaterial({
@@ -661,56 +666,15 @@ export function createScene(canvas) {
     mesh.scale.setScalar(MAIN_RUNE_SCALE);
     mesh.userData = {
       isAltarIcon: true,
-      link,
+      action,
       label,
       baseEmissive: 0,
       hoverEmissive: 3.6,
     };
     altarGroup.add(mesh);
     interactiveIcons.push(mesh);
+    glowRunes.push({ mesh, phase: glowPhase });
   });
-
-  // Smaller crescent moon in the upper-right of the stele — clicking it toggles theme.
-  {
-    const moonY = 3.95 + RUNE_Y_OFFSET;
-    const moonX = 0.45;
-    const frontZ = steleRadiusAt(moonY) + 0.03;
-    const recess = new THREE.Mesh(new THREE.CircleGeometry(0.28, 24), recessMat);
-    recess.position.set(moonX, moonY, frontZ - 0.012);
-    altarGroup.add(recess);
-
-    const tex = makeMoonTexture('#dde6ff');
-    const mDCv = document.createElement('canvas'); mDCv.width = mDCv.height = 256;
-    const mDCtx = mDCv.getContext('2d');
-    mDCtx.clearRect(0, 0, 256, 256);
-    mDCtx.fillStyle = 'rgba(18,12,10,0.68)';
-    mDCtx.beginPath(); mDCtx.arc(118, 132, 78, 0, Math.PI * 2); mDCtx.fill();
-    mDCtx.globalCompositeOperation = 'destination-out';
-    mDCtx.beginPath(); mDCtx.arc(160, 116, 70, 0, Math.PI * 2); mDCtx.fill();
-    const darkMoonTex = new THREE.CanvasTexture(mDCv);
-    darkMoonTex.colorSpace = THREE.SRGBColorSpace; darkMoonTex.anisotropy = 4;
-    const mat = new THREE.MeshStandardMaterial({
-      map: darkMoonTex,
-      emissiveMap: tex,
-      emissive: new THREE.Color(0xc8d4ff),
-      emissiveIntensity: 0,
-      roughness: 1,
-      transparent: true,
-      alphaTest: 0.04,
-      depthWrite: false,
-    });
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.5), mat);
-    mesh.position.set(moonX, moonY, frontZ);
-    mesh.userData = {
-      isAltarIcon: true,
-      action: 'toggleTheme',
-      label: 'Toggle theme',
-      baseEmissive: 0,
-      hoverEmissive: 3.6,
-    };
-    altarGroup.add(mesh);
-    interactiveIcons.push(mesh);
-  }
 
   // Surrounding lamps & glows around the altar.
   const altarLights = new THREE.Group();
@@ -1153,11 +1117,27 @@ export function createScene(canvas) {
     pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
     pointerInside = true;
   }
-  function onPointerClick() {
+  function onPointerClick(e) {
+    // Skip clicks that landed on overlay UI (popups, header, etc.)
+    if (e && e.target && e.target.closest && e.target.closest('[data-altar-overlay], header, button, a')) return;
+    // Mobile/touch: hover state may not be set before click fires, so sync the
+    // pointer from the click event and raycast inline.
+    if (e && typeof e.clientX === 'number' && state.displayed > 0.85) {
+      const rect = canvas.getBoundingClientRect();
+      pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(interactiveIcons, false);
+      if (hits.length > 0) hoveredIcon = hits[0].object;
+    }
     if (!hoveredIcon) return;
     const data = hoveredIcon.userData;
     if (data.action === 'toggleTheme') {
       window.dispatchEvent(new CustomEvent('altar-theme-toggle'));
+      return;
+    }
+    if (data.action === 'openLinksPopup') {
+      window.dispatchEvent(new CustomEvent('altar-links-popup'));
       return;
     }
     if (data.link) window.open(data.link, '_blank', 'noopener');
@@ -1246,6 +1226,14 @@ export function createScene(canvas) {
     flameLight.intensity = 1.3 + Math.sin(t * 10.6) * 0.22;
 
     treesGroup.rotation.z = Math.sin(t * 0.4) * 0.004;
+
+    // Ambient glow pulse on the two main altar runes — breathes slowly, offset phases.
+    for (let i = 0; i < glowRunes.length; i++) {
+      const gr = glowRunes[i];
+      if (gr.mesh !== hoveredIcon) {
+        gr.mesh.material.emissiveIntensity = 0.55 + Math.sin(t * 1.4 + gr.phase) * 0.38;
+      }
+    }
 
     // Hover state for altar icons — only active in the last stretch of the scroll, after
     // the camera is approaching the altar at the end of the journey.
