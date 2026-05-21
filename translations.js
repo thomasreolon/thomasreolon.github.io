@@ -35,6 +35,14 @@ export function i18n(lang) {
           title: 'Object detection on binary motion frames',
           blurb: 'A YOLO-inspired detector built for binary motion frames rather than RGB. The interesting parts lived in the seams: quantizing the network to run at the edge, neural architecture search over the topology, and getting useful gradients through a non-differentiable preprocessor whose discrete parameters fed those binary frames into the net.',
         },
+        project2: {
+          title: 'Deepfake detection via facial action units',
+          blurb: 'Person-specific deepfake detection trained on real footage only. OpenFace extracts 190 action-unit covariance features per video — muscle movement patterns a face-swap cannot fully replicate — which feed a One-Class SVM that learns what a real Obama or Musk looks like and flags deviations. Tested across six subjects: 89.6% accuracy, 94.5% F1.',
+        },
+        project3: {
+          title: 'Optimal sampling from diffusion models',
+          blurb: 'Generate N images from a prompt, score them with CLIP-IQA, keep the best — how large should N be? A systematic sweep finds the sweet spot sits around five: past that, returns diminish fast. The method lifts expected image quality by 15–20% at negligible extra cost.',
+        },
       },
       realEstate: {
         project1: {
@@ -87,6 +95,14 @@ export function i18n(lang) {
         project1: {
           title: 'Object detection su frame di movimento binari',
           blurb: 'Un detector ispirato a YOLO costruito per frame di movimento binari invece che RGB. Le parti interessanti vivevano nelle giunzioni: quantizzare la rete per farla girare su edge device, neural architecture search sulla topologia, e ottenere gradienti utili attraverso un preprocessore non differenziabile i cui parametri discreti alimentavano quei frame binari nella rete.',
+        },
+        project2: {
+          title: 'Rilevamento deepfake tramite action unit facciali',
+          blurb: 'Rilevamento deepfake specifico per persona, addestrato solo su video reali. OpenFace estrae 190 feature di covarianza basate sulle action unit — pattern di movimento muscolare che uno swap facciale non riesce a replicare fedelmente — che alimentano una One-Class SVM che apprende come appare davvero un Obama o un Musk reale e segnala le deviazioni. Testato su sei soggetti: 89.6% di accuratezza, 94.5% di F1.',
+        },
+        project3: {
+          title: 'Campionamento ottimale da modelli diffusivi',
+          blurb: 'Genera N immagini da un prompt, valutale con CLIP-IQA, tieni la migliore — quanto grande deve essere N? Una scansione sistematica trova il punto ottimale intorno a cinque: oltre, i ritorni calano rapidamente. Il metodo migliora la qualità attesa delle immagini del 15–20% a costo marginale trascurabile.',
         },
       },
       realEstate: {

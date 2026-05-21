@@ -520,6 +520,20 @@ function AISection({ T, L }) {
               blurb={L.ai.project1.blurb}
               href="https://github.com/thomasreolon/UNITN-master-thesis/blob/main/report.pdf"
             />
+            <ProjectTile
+              T={T}
+              index={2}
+              title={L.ai.project2.title}
+              blurb={L.ai.project2.blurb}
+              href="https://github.com/thomasreolon/DeepfakeDetection/blob/main/DeepFake_paper.pdf"
+            />
+            <ProjectTile
+              T={T}
+              index={3}
+              title={L.ai.project3.title}
+              blurb={L.ai.project3.blurb}
+              href="https://drive.google.com/file/d/1SX61ZjEsS0FKgPZ0w1NP2nB9fu8fVezR/view?usp=drive_link"
+            />
           </div>
         </div>
       </div>
