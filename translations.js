@@ -51,7 +51,7 @@ export function i18n(lang) {
         },
       },
       contact: {
-        altarText: 'Contacts on the altar.',
+        altarText: '',
         copyright: '© 2026 Thomas Reolon',
         credits: 'CREDITS',
         creditsBody: [

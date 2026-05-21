@@ -458,7 +458,7 @@ function Finance({ T, L }) {
     <section
       id="finance"
       data-screen-label="02 Finance"
-      className="min-h-screen px-6 md:px-16 py-32 flex items-center"
+      className="px-6 md:px-16 py-11 flex items-center"
     >
       <div className="max-w-3xl ml-auto w-full">
         <div
@@ -499,7 +499,7 @@ function AISection({ T, L }) {
     <section
       id="ai"
       data-screen-label="03 Machine Learning"
-      className="min-h-screen px-6 md:px-16 py-32 flex items-center"
+      className="px-6 md:px-16 py-11 flex items-center"
     >
       <div className="max-w-3xl w-full">
         <div
@@ -547,7 +547,7 @@ function RealEstate({ T, L }) {
     <section
       id="real-estate"
       data-screen-label="04 Real Estate"
-      className="min-h-screen px-6 md:px-16 py-32 flex items-center"
+      className="px-6 md:px-16 py-11 flex items-center"
     >
       <div className="max-w-3xl ml-auto w-full">
         <div
