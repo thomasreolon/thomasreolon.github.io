@@ -36,14 +36,11 @@ export function i18n(lang) {
           blurb: 'A YOLO-inspired detector built for binary motion frames rather than RGB. The interesting parts lived in the seams: quantizing the network to run at the edge, neural architecture search over the topology, and getting useful gradients through a non-differentiable preprocessor whose discrete parameters fed those binary frames into the net.',
         },
       },
-      placeholder: {
-        status: 'Work in progress',
-        heading: 'Chapter under construction.',
-        leftLabel: 'Drafting',
-        rightLabel: '2026',
-      },
       realEstate: {
-        teaser: 'A chapter still being written — pipelines, valuation work, and the unglamorous transaction tooling that lives behind a closing. Check back.',
+        project1: {
+          title: 'Italian property investment tracker',
+          blurb: 'Real estate listings across Italy, collected and scored by an AI valuation model. Each property is rated on investment potential — asking price weighed against local price trends, estimated rental yield, and comparable sales — so what surfaces first are the deals worth examining, not just the most recently posted listings.',
+        },
       },
       contact: {
         altarText: 'Contacts on the altar.',
@@ -92,14 +89,11 @@ export function i18n(lang) {
           blurb: 'Un detector ispirato a YOLO costruito per frame di movimento binari invece che RGB. Le parti interessanti vivevano nelle giunzioni: quantizzare la rete per farla girare su edge device, neural architecture search sulla topologia, e ottenere gradienti utili attraverso un preprocessore non differenziabile i cui parametri discreti alimentavano quei frame binari nella rete.',
         },
       },
-      placeholder: {
-        status: 'Lavori in corso',
-        heading: 'Capitolo in costruzione.',
-        leftLabel: 'In stesura',
-        rightLabel: '2026',
-      },
       realEstate: {
-        teaser: 'Un capitolo ancora da scrivere — pipeline, lavoro di valutazione e i tool di transazione poco affascinanti che vivono dietro a un closing. Torna a controllare.',
+        project1: {
+          title: 'Tracker immobiliare italiano',
+          blurb: 'Annunci immobiliari italiani raccolti e valutati da un modello AI. Ogni proprietà riceve un punteggio di interesse come investimento — il prezzo richiesto confrontato con i trend locali, il rendimento da affitto stimato e le vendite comparabili — così in cima emergono le opportunità che vale davvero la pena guardare, non solo gli annunci più recenti.',
+        },
       },
       contact: {
         altarText: 'I contatti sono sull’altare.',

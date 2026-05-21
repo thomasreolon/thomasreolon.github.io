@@ -451,42 +451,6 @@ function ProjectTile({ T, index, title, blurb, href }) {
   );
 }
 
-function PlaceholderPanel({ T, L, chapterIndex, chapterLabel, teaser }) {
-  return (
-    <Card T={T}>
-      <ChapterMarker index={chapterIndex} label={chapterLabel} T={T} L={L} />
-      <div className="mt-8 flex items-center gap-3">
-        <span
-          className="inline-block w-1.5 h-1.5 rounded-full animate-pulse"
-          style={{ background: T.heading }}
-          aria-hidden
-        />
-        <span
-          className="font-mono text-[11px] uppercase tracking-[0.3em]"
-          style={{ color: T.muted }}
-        >
-          {L.placeholder.status}
-        </span>
-      </div>
-      <h2
-        className="mt-6 font-display text-4xl md:text-5xl leading-[0.95]"
-        style={{ color: T.heading }}
-      >
-        {L.placeholder.heading}
-      </h2>
-      <p className="mt-6 text-lg md:text-xl leading-relaxed" style={{ color: T.body }}>
-        {teaser}
-      </p>
-      <div
-        className="mt-10 pt-6 flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.3em]"
-        style={{ borderTop: '1px solid ' + T.cardBorder, color: T.muted }}
-      >
-        <span>{L.placeholder.leftLabel}</span>
-        <span>{L.placeholder.rightLabel}</span>
-      </div>
-    </Card>
-  );
-}
 
 function Finance({ T, L }) {
   const softBg = T.cardBg.replace(/[\d.]+\)$/, (m) => (parseFloat(m) * 0.8).toFixed(3) + ')');
@@ -564,6 +528,7 @@ function AISection({ T, L }) {
 }
 
 function RealEstate({ T, L }) {
+  const softBg = T.cardBg.replace(/[\d.]+\)$/, (m) => (parseFloat(m) * 0.8).toFixed(3) + ')');
   return (
     <section
       id="real-estate"
@@ -571,13 +536,26 @@ function RealEstate({ T, L }) {
       className="min-h-screen px-6 md:px-16 py-32 flex items-center"
     >
       <div className="max-w-3xl ml-auto w-full">
-        <PlaceholderPanel
-          T={T}
-          L={L}
-          chapterIndex={3}
-          chapterLabel={L.chapters.realEstate}
-          teaser={L.realEstate.teaser}
-        />
+        <div
+          className="rounded-2xl p-8 md:p-10"
+          style={{
+            background: softBg,
+            border: '1px solid ' + T.cardBorder,
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+          }}
+        >
+          <ChapterMarker index={3} label={L.chapters.realEstate} T={T} L={L} />
+          <div className="mt-8 space-y-4">
+            <ProjectTile
+              T={T}
+              index={1}
+              title={L.realEstate.project1.title}
+              blurb={L.realEstate.project1.blurb}
+              href="https://ita-house-data.web.app"
+            />
+          </div>
+        </div>
       </div>
     </section>
   );
