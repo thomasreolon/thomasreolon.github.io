@@ -7,6 +7,7 @@ export function i18n(lang) {
           { id: 'finance', label: 'Finance' },
           { id: 'ai', label: 'Machine Learning' },
           { id: 'real-estate', label: 'Real Estate' },
+          { id: 'contact', label: 'Contact' },
         ],
       },
       hero: {
@@ -20,6 +21,14 @@ export function i18n(lang) {
         ai: 'Machine Learning',
         realEstate: 'Real Estate',
       },
+      rail: {
+        hero: 'Start',
+        finance: 'Finance',
+        ai: 'Machine Learning',
+        realEstate: 'Real Estate',
+        contact: 'Contact',
+      },
+      visit: 'Visit',
       finance: {
         project1: {
           title: 'Daily market journal',
@@ -51,7 +60,14 @@ export function i18n(lang) {
         },
       },
       contact: {
-        altarText: '',
+        kicker: 'Journey’s end',
+        heading: 'Let’s build something.',
+        sub: 'The runes on the altar hold my links — or take the short path:',
+        links: [
+          { label: 'LinkedIn', href: 'https://www.linkedin.com/in/thomas-reolon-9270971a3' },
+          { label: 'GitHub', href: 'https://github.com/thomasreolon' },
+          { label: 'CV & Docs', href: 'https://drive.google.com/drive/folders/1K-3m9gpXWkoQowV_7onFJv20afQ1rr78?usp=drive_link' },
+        ],
         copyright: '© 2026 Thomas Reolon',
         credits: 'CREDITS',
         creditsBody: [
@@ -68,6 +84,7 @@ export function i18n(lang) {
           { id: 'finance', label: 'Finanza' },
           { id: 'ai', label: 'Machine Learning' },
           { id: 'real-estate', label: 'Immobiliare' },
+          { id: 'contact', label: 'Contatti' },
         ],
       },
       hero: {
@@ -81,6 +98,14 @@ export function i18n(lang) {
         ai: 'Machine Learning',
         realEstate: 'Immobiliare',
       },
+      rail: {
+        hero: 'Inizio',
+        finance: 'Finanza',
+        ai: 'Machine Learning',
+        realEstate: 'Immobiliare',
+        contact: 'Contatti',
+      },
+      visit: 'Apri',
       finance: {
         project1: {
           title: 'Diario di mercato giornaliero',
@@ -112,7 +137,14 @@ export function i18n(lang) {
         },
       },
       contact: {
-        altarText: 'I contatti sono sull’altare.',
+        kicker: 'Fine del viaggio',
+        heading: 'Costruiamo qualcosa.',
+        sub: 'Le rune sull’altare custodiscono i miei link — o prendi la via breve:',
+        links: [
+          { label: 'LinkedIn', href: 'https://www.linkedin.com/in/thomas-reolon-9270971a3' },
+          { label: 'GitHub', href: 'https://github.com/thomasreolon' },
+          { label: 'CV & Documenti', href: 'https://drive.google.com/drive/folders/1K-3m9gpXWkoQowV_7onFJv20afQ1rr78?usp=drive_link' },
+        ],
         copyright: '© 2026 Thomas Reolon',
         credits: 'CREDITI',
         creditsBody: [
