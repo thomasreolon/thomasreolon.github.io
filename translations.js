@@ -7,6 +7,7 @@ export function i18n(lang) {
           { id: 'finance', label: 'Finance' },
           { id: 'ai', label: 'Machine Learning' },
           { id: 'real-estate', label: 'Real Estate' },
+          { id: 'altro', label: 'More' },
           { id: 'contact', label: 'Contact' },
         ],
       },
@@ -20,12 +21,14 @@ export function i18n(lang) {
         finance: 'Finance',
         ai: 'Machine Learning',
         realEstate: 'Real Estate',
+        more: 'More',
       },
       rail: {
         hero: 'Start',
         finance: 'Finance',
         ai: 'Machine Learning',
         realEstate: 'Real Estate',
+        more: 'More',
         contact: 'Contact',
       },
       visit: 'Visit',
@@ -59,6 +62,16 @@ export function i18n(lang) {
           blurb: 'Real estate listings across Italy, collected and scored by an AI valuation model. Each property is rated on investment potential — asking price weighed against local price trends, estimated rental yield, and comparable sales — so what surfaces first are the deals worth examining, not just the most recently posted listings.',
         },
       },
+      more: {
+        project1: {
+          title: 'Job-based SaaS blueprint',
+          blurb: 'Most of a SaaS is plumbing nobody pays for — auth, a credit ledger, a job queue, file storage, GDPR. So I built the plumbing once, reusable: a new feature is a single Python file dropped into the catalog, and the dashboard generates its form and renders its output straight from the schema, no frontend work. A FastAPI monolith serves a React SPA, the queue is Postgres itself (no broker), auth is Firebase, and credits live in an append-only ledger — the whole thing runs at $0 idle on Cloud Run.',
+        },
+        project2: {
+          title: 'RSVP speed-reading app',
+          blurb: 'Reading is mostly the eye hopping around the page; remove the hops and you read faster. Words flash one at a time at a fixed spot with the optimal-recognition letter pinned in red, so your gaze never moves. The pacing adapts — longer for big words and numbers, pausing at commas and sentence ends, easing back up after a break. Feed it a PDF, EPUB, Markdown or pasted text; position, speed and the cleaned-up book persist locally for offline re-reading.',
+        },
+      },
       contact: {
         kicker: 'Journey’s end',
         heading: 'Let’s build something.',
@@ -84,6 +97,7 @@ export function i18n(lang) {
           { id: 'finance', label: 'Finanza' },
           { id: 'ai', label: 'Machine Learning' },
           { id: 'real-estate', label: 'Immobiliare' },
+          { id: 'altro', label: 'Altro' },
           { id: 'contact', label: 'Contatti' },
         ],
       },
@@ -97,12 +111,14 @@ export function i18n(lang) {
         finance: 'Finanza',
         ai: 'Machine Learning',
         realEstate: 'Immobiliare',
+        more: 'Altro',
       },
       rail: {
         hero: 'Inizio',
         finance: 'Finanza',
         ai: 'Machine Learning',
         realEstate: 'Immobiliare',
+        more: 'Altro',
         contact: 'Contatti',
       },
       visit: 'Apri',
@@ -134,6 +150,16 @@ export function i18n(lang) {
         project1: {
           title: 'Tracker immobiliare italiano',
           blurb: 'Annunci immobiliari italiani raccolti e valutati da un modello AI. Ogni proprietà riceve un punteggio di interesse come investimento — il prezzo richiesto confrontato con i trend locali, il rendimento da affitto stimato e le vendite comparabili — così in cima emergono le opportunità che vale davvero la pena guardare, non solo gli annunci più recenti.',
+        },
+      },
+      more: {
+        project1: {
+          title: 'Blueprint per SaaS a job',
+          blurb: 'Gran parte di un SaaS è impalcatura che nessuno paga — autenticazione, registro dei crediti, coda dei job, storage dei file, GDPR. Così l’ho costruita una volta sola, riutilizzabile: una nuova funzione è un singolo file Python aggiunto al catalogo, e la dashboard ne genera il form e mostra l’output direttamente dallo schema, senza toccare il frontend. Un monolite FastAPI serve una SPA React, la coda è Postgres stesso (nessun broker), l’autenticazione è Firebase e i crediti vivono in un registro append-only — il tutto gira a $0 da fermo su Cloud Run.',
+        },
+        project2: {
+          title: 'App di lettura veloce RSVP',
+          blurb: 'Leggere è soprattutto l’occhio che salta sulla pagina; togli i salti e leggi più in fretta. Le parole appaiono una alla volta in un punto fisso, con la lettera di riconoscimento ottimale evidenziata in rosso, così lo sguardo non si muove mai. Il ritmo si adatta — più lungo per parole lunghe e numeri, pause alle virgole e a fine frase, ripartenza graduale dopo una pausa. Dagli un PDF, un EPUB, del Markdown o testo incollato; posizione, velocità e libro ripulito restano salvati in locale per rileggere offline.',
         },
       },
       contact: {

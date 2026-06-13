@@ -209,6 +209,7 @@ function JourneyRail({ T, L }) {
     { id: 'finance', label: L.rail.finance },
     { id: 'ai', label: L.rail.ai },
     { id: 'real-estate', label: L.rail.realEstate },
+    { id: 'altro', label: L.rail.more },
     { id: 'contact', label: L.rail.contact },
   ];
   const active = useActiveSection(items.map((i) => i.id));
@@ -588,7 +589,7 @@ function Contact({ T, L }) {
   return (
     <section
       id="contact"
-      data-screen-label="05 Contact"
+      data-screen-label="06 Contact"
       className="min-h-screen px-6 md:px-16 pt-28 pb-10 flex flex-col"
     >
       <div ref={ref} className="reveal flex flex-col items-center text-center">
@@ -848,6 +849,19 @@ function App() {
           align="right"
           projects={[
             { ...L.realEstate.project1, href: 'https://ita-house-data.web.app' },
+          ]}
+          T={T}
+          L={L}
+        />
+        <Chapter
+          id="altro"
+          screenLabel="05 More"
+          index={4}
+          label={L.chapters.more}
+          align="left"
+          projects={[
+            { ...L.more.project1, href: 'https://funzioni-gratis.web.app/' },
+            { ...L.more.project2, href: 'https://app-lettura.web.app/' },
           ]}
           T={T}
           L={L}
