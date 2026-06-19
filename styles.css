@@ -129,3 +129,10 @@ body {
   .reveal { opacity: 1; transform: none; transition: none; }
   .scroll-cue-line::after { animation: none; }
 }
+
+/* ---------- Mobile performance overrides ---------- */
+@media (max-width: 768px) {
+  .grain-overlay {
+    display: none;
+  }
+}

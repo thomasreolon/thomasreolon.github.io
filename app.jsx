@@ -11,13 +11,26 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "mobile": false
 }/*EDITMODE-END*/;
 
+// Detect actual mobile devices
+const isMobileDevice = typeof window !== 'undefined' && (window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+
 // Shared frosted-glass surface treatment so every floating element reads as one family.
-const glass = (T, blur = 14) => ({
-  background: T.cardBg,
-  border: '1px solid ' + T.cardBorder,
-  backdropFilter: `blur(${blur}px) saturate(140%)`,
-  WebkitBackdropFilter: `blur(${blur}px) saturate(140%)`,
-});
+const glass = (T, blur = 14) => {
+  if (isMobileDevice) {
+    return {
+      background: T.cardBgMobile || T.cardBg,
+      border: '1px solid ' + T.cardBorder,
+      backdropFilter: blur > 0 ? `blur(${Math.min(blur, 6)}px) saturate(120%)` : 'none',
+      WebkitBackdropFilter: blur > 0 ? `blur(${Math.min(blur, 6)}px) saturate(120%)` : 'none',
+    };
+  }
+  return {
+    background: T.cardBg,
+    border: '1px solid ' + T.cardBorder,
+    backdropFilter: `blur(${blur}px) saturate(140%)`,
+    WebkitBackdropFilter: `blur(${blur}px) saturate(140%)`,
+  };
+};
 
 // ---------- Tweaks plumbing ----------
 function useTweaks() {
@@ -118,7 +131,7 @@ function useScrollScene(canvasRef, theme, scrollerRef, mobile) {
     (async () => {
       const mod = await import('./scene.js');
       if (cancelled || sceneRef.current) return;
-      sceneRef.current = mod.createScene(canvasRef.current);
+      sceneRef.current = mod.createScene(canvasRef.current, isMobileDevice);
       setSceneReady(true);
     })();
     return () => {

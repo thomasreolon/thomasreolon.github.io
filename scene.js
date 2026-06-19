@@ -2,10 +2,14 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // Sunset / night road journey - peach blossoms, day-night theming, longer road
-export function createScene(canvas) {
+export function createScene(canvas, isMobilePassed) {
+  const isMobile = isMobilePassed !== undefined ? isMobilePassed : (
+    typeof window !== 'undefined' && (window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
+  );
+
   const assetUrl = (name) => `${import.meta.env.BASE_URL}uploads/${name}`;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+  renderer.setPixelRatio(isMobile ? Math.min(1.2, window.devicePixelRatio) : Math.min(2, window.devicePixelRatio));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
@@ -192,12 +196,68 @@ export function createScene(canvas) {
   road.position.set(0, -0.18, -180);
   scene.add(road);
 
+  // Shared materials for optimization
+  const sharedTrunkMat = new THREE.MeshStandardMaterial({ color: 0x4a2e26, flatShading: true, roughness: 1 });
+  
+  const blossomColors = [0xf6c0cd, 0xf2a5b8, 0xeec2c8, 0xf8d5d8, 0xe8889e, 0xf5b0bf];
+  const sharedBlossomMats = blossomColors.map(color => new THREE.MeshStandardMaterial({
+    color,
+    flatShading: true,
+    roughness: 0.85,
+  }));
+
+  const bushColors = [0xc88068, 0xb86058, 0xa05058, 0xd9a07a];
+  const sharedBushMats = bushColors.map(color => new THREE.MeshStandardMaterial({
+    color,
+    flatShading: true,
+    roughness: 1,
+  }));
+
+  const sharedMtnMatEven = new THREE.MeshStandardMaterial({ color: 0x7a4858, flatShading: true, roughness: 1 });
+  const sharedMtnMatOdd = new THREE.MeshStandardMaterial({ color: 0x6a3a4a, flatShading: true, roughness: 1 });
+
+  const sharedLampMat = new THREE.MeshStandardMaterial({
+    color: 0xffe2a0,
+    emissive: 0xffb060,
+    emissiveIntensity: 0,
+    flatShading: true,
+  });
+
+  const sharedPostMat = new THREE.MeshStandardMaterial({ color: 0x3a2218, flatShading: true });
+
+  const sharedStoneMat = new THREE.MeshStandardMaterial({ color: 0xc89870, flatShading: true, roughness: 1 });
+
+  // Shared crystal materials cache
+  const crystalSharedMats = [];
+  function getSharedCrystalMaterial(color, baseIntensity, phaseIndex) {
+    const existing = crystalSharedMats.find(
+      m => m.userData.color === color && 
+           m.userData.baseIntensity === baseIntensity && 
+           m.userData.phaseIndex === phaseIndex
+    );
+    if (existing) return existing;
+    
+    const mat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(color),
+      emissive: new THREE.Color(color),
+      emissiveIntensity: baseIntensity,
+      flatShading: true,
+      roughness: 0.3,
+      metalness: 0.1,
+      transparent: true,
+      opacity: 0.88,
+    });
+    mat.userData = { color, baseIntensity, phaseIndex };
+    crystalSharedMats.push(mat);
+    return mat;
+  }
+
   // Center stones
   const stoneGroup = new THREE.Group();
   for (let z = 18; z > -360; z -= 4) {
     const s = new THREE.Mesh(
       new THREE.CircleGeometry(0.4 + rand() * 0.15, 6),
-      new THREE.MeshStandardMaterial({ color: 0xc89870, flatShading: true, roughness: 1 })
+      sharedStoneMat
     );
     s.rotation.x = -Math.PI / 2;
     s.position.set((rand() - 0.5) * 0.4, -0.16, z);
@@ -211,7 +271,7 @@ export function createScene(canvas) {
     for (const side of [-1, 1]) {
       const post = new THREE.Mesh(
         new THREE.CylinderGeometry(0.06, 0.08, 2.2, 5),
-        new THREE.MeshStandardMaterial({ color: 0x3a2218, flatShading: true })
+        sharedPostMat
       );
       const x = side * 2.6;
       const baseY = groundY(x, z + 180);
@@ -219,9 +279,7 @@ export function createScene(canvas) {
       lanterns.add(post);
       const lamp = new THREE.Mesh(
         new THREE.IcosahedronGeometry(0.22, 0),
-        new THREE.MeshStandardMaterial({
-          color: 0xffe2a0, emissive: 0xffb060, emissiveIntensity: 0, flatShading: true,
-        })
+        sharedLampMat
       );
       lamp.position.set(x, baseY + 2.3, z);
       lamp.userData.isLamp = true;
@@ -235,14 +293,13 @@ export function createScene(canvas) {
     const rng = mulberry32(seed);
     const tree = new THREE.Group();
     const trunkH = 1.6 + rng() * 1.2;
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a2e26, flatShading: true, roughness: 1 });
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.18, trunkH, 6), trunkMat);
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.18, trunkH, 6), sharedTrunkMat);
     trunk.position.y = trunkH / 2;
     tree.add(trunk);
     const branchCount = 1 + Math.floor(rng() * 2);
     for (let b = 0; b < branchCount; b++) {
       const bL = 0.8 + rng() * 0.5;
-      const branch = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.09, bL, 5), trunkMat);
+      const branch = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.09, bL, 5), sharedTrunkMat);
       branch.position.y = trunkH * (0.55 + rng() * 0.25);
       const angle = rng() * Math.PI * 2;
       branch.rotation.order = 'ZYX';
@@ -253,16 +310,13 @@ export function createScene(canvas) {
       branch.position.z += Math.sin(angle) * 0.2;
       tree.add(branch);
     }
-    const blossomColors = [0xf6c0cd, 0xf2a5b8, 0xeec2c8, 0xf8d5d8, 0xe8889e, 0xf5b0bf];
     const clusterCount = 4 + Math.floor(rng() * 4);
     for (let i = 0; i < clusterCount; i++) {
       const r = 0.55 + rng() * 0.35;
+      const colorIdx = Math.floor(rng() * blossomColors.length);
       const blob = new THREE.Mesh(
         new THREE.IcosahedronGeometry(r, 0),
-        new THREE.MeshStandardMaterial({
-          color: blossomColors[Math.floor(rng() * blossomColors.length)],
-          flatShading: true, roughness: 0.85,
-        })
+        sharedBlossomMats[colorIdx]
       );
       const angle = rng() * Math.PI * 2;
       const dist = rng() * 0.7;
@@ -276,9 +330,9 @@ export function createScene(canvas) {
 
   const treesGroup = new THREE.Group();
   let treeSeed = 1;
-  for (let z = 16; z > -360; z -= 3.0 + rand() * 1.6) {
+  for (let z = 16; z > -360; z -= (isMobile ? (4.5 + rand() * 2.5) : (3.0 + rand() * 1.6))) {
     for (const side of [-1, 1]) {
-      if (rand() < 0.16) continue;
+      if (rand() < (isMobile ? 0.35 : 0.16)) continue;
       const x = side * (3.4 + rand() * 6.5);
       const y = groundY(x, z + 180);
       const tree = makeBlossomTree(treeSeed++);
@@ -288,9 +342,9 @@ export function createScene(canvas) {
       treesGroup.add(tree);
     }
   }
-  for (let z = 12; z > -340; z -= 5.5 + rand() * 4) {
+  for (let z = 12; z > -340; z -= (isMobile ? (8.0 + rand() * 6.0) : (5.5 + rand() * 4.0))) {
     for (const side of [-1, 1]) {
-      if (rand() < 0.4) continue;
+      if (rand() < (isMobile ? 0.6 : 0.4)) continue;
       const x = side * (10 + rand() * 16);
       const y = groundY(x, z + 180);
       const tree = makeBlossomTree(treeSeed++);
@@ -315,9 +369,8 @@ export function createScene(canvas) {
 
   // Bushes (small low-poly clusters) — extra interest
   const bushGroup = new THREE.Group();
-  const bushColors = [0xc88068, 0xb86058, 0xa05058, 0xd9a07a];
-  for (let z = 14; z > -360; z -= 2.6 + rand() * 2.2) {
-    if (rand() < 0.5) continue;
+  for (let z = 14; z > -360; z -= (isMobile ? (4.0 + rand() * 3.5) : (2.6 + rand() * 2.2))) {
+    if (rand() < (isMobile ? 0.7 : 0.5)) continue;
     const side = rand() < 0.5 ? -1 : 1;
     const x = side * (2.6 + rand() * 8);
     const y = groundY(x, z + 180);
@@ -325,12 +378,10 @@ export function createScene(canvas) {
     const cnt = 2 + Math.floor(rand() * 3);
     for (let i = 0; i < cnt; i++) {
       const r = 0.25 + rand() * 0.3;
+      const colorIdx = Math.floor(rand() * bushColors.length);
       const blob = new THREE.Mesh(
         new THREE.IcosahedronGeometry(r, 0),
-        new THREE.MeshStandardMaterial({
-          color: bushColors[Math.floor(rand() * bushColors.length)],
-          flatShading: true, roughness: 1,
-        })
+        sharedBushMats[colorIdx]
       );
       blob.position.set((rand() - 0.5) * 0.5, r * 0.8, (rand() - 0.5) * 0.5);
       blob.rotation.set(rand(), rand(), rand());
@@ -342,7 +393,7 @@ export function createScene(canvas) {
   scene.add(bushGroup);
 
   // Rocks — bigger pool
-  const ROCK_N = 140;
+  const ROCK_N = isMobile ? 80 : 140;
   const rockMat = new THREE.MeshStandardMaterial({ color: 0x8b6852, flatShading: true, roughness: 1 });
   const rocks = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.55, 0), rockMat, ROCK_N);
   const dummy = new THREE.Object3D();
@@ -363,7 +414,6 @@ export function createScene(canvas) {
   // Mountains — flanking the road so the walk passes between them
   // Two layers: a close dramatic ring and a far backdrop ring
   const mountains = new THREE.Group();
-  const mountainMats = [];
   const MTN_N = 34;
   for (let i = 0; i < MTN_N; i++) {
     // Alternate sides with slight jitter so groupings feel organic
@@ -376,10 +426,7 @@ export function createScene(canvas) {
     const z = inner ? -50 - rand() * 200 : -30 - rand() * 240;
     const w = inner ? 12 + rand() * 14 : 20 + rand() * 24;
     const h = inner ? 18 + rand() * 20 : 28 + rand() * 28;
-    const mat = new THREE.MeshStandardMaterial({
-      color: rand() < 0.5 ? 0x6a3a4a : 0x7a4858, flatShading: true, roughness: 1,
-    });
-    mountainMats.push(mat);
+    const mat = (i % 2 === 0) ? sharedMtnMatEven : sharedMtnMatOdd;
     const mesh = new THREE.Mesh(new THREE.ConeGeometry(w, h, 5), mat);
     mesh.position.set(x, h / 2 - 1, z);
     mesh.rotation.y = rand() * Math.PI;
@@ -390,9 +437,8 @@ export function createScene(canvas) {
     { x:  0,  z: -268, w: 55, h: 95, s: 5, r: 0.3 },
     { x: -14, z: -282, w: 38, h: 72, s: 5, r: 1.4 },
     { x:  20, z: -290, w: 30, h: 60, s: 6, r: 2.1 },
-  ].forEach(({ x, z, w, h, s, r }) => {
-    const mat = new THREE.MeshStandardMaterial({ color: 0x5a3050, flatShading: true, roughness: 1 });
-    mountainMats.push(mat);
+  ].forEach(({ x, z, w, h, s, r }, i) => {
+    const mat = (i % 2 === 0) ? sharedMtnMatEven : sharedMtnMatOdd;
     const mesh = new THREE.Mesh(new THREE.ConeGeometry(w, h, s), mat);
     mesh.position.set(x, h / 2 - 1, z);
     mesh.rotation.y = r;
@@ -689,32 +735,19 @@ export function createScene(canvas) {
     const lamp = new THREE.Mesh(new THREE.IcosahedronGeometry(0.16, 0), altarLampMat);
     lamp.position.set(rx, ry + 0.42, rz);
     altarLights.add(lamp);
-    const glow = new THREE.PointLight(0xffd5a8, 0.55, 8, 2);
-    glow.position.set(rx, ry + 0.55, rz);
-    altarLights.add(glow);
+    
+    if (!isMobile) {
+      const glow = new THREE.PointLight(0xffd5a8, 0.55, 8, 2);
+      glow.position.set(rx, ry + 0.55, rz);
+      altarLights.add(glow);
+    }
+  }
+  if (isMobile) {
+    const centralAltarGlow = new THREE.PointLight(0xffd5a8, 1.2, 14, 1.5);
+    centralAltarGlow.position.set(altarX, altarY + 0.8, altarZ);
+    altarLights.add(centralAltarGlow);
   }
   scene.add(altarLights);
-
-  // Crystals — emissive shards on the ground around the altar and emerging from the mountain.
-  const crystalMats = [];
-  function makeCrystal(color, h, baseIntensity = 1.6) {
-    const geo = new THREE.OctahedronGeometry(h * 0.5, 0);
-    geo.scale(0.55, 1.8, 0.55);
-    const mat = new THREE.MeshStandardMaterial({
-      color,
-      emissive: new THREE.Color(color),
-      emissiveIntensity: baseIntensity,
-      flatShading: true,
-      roughness: 0.3,
-      metalness: 0.1,
-      transparent: true,
-      opacity: 0.88,
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    mat.userData.baseIntensity = baseIntensity;
-    crystalMats.push(mat);
-    return mesh;
-  }
 
   // Hero crystal clusters — two bouquets framing the altar at the screen borders. Each cluster
   // has one dominant central shard plus 8–11 secondary shards fanning out asymmetrically with
@@ -724,25 +757,17 @@ export function createScene(canvas) {
     const cPrimary = new THREE.Color(primary);
     const cAccent = new THREE.Color(accent);
     const cWhite = new THREE.Color(0xffffff);
-    function addShard(h, colorChoice, posX, posY, posZ, leanX, leanZ, intensity, slender = 1) {
+    function addShard(h, colorChoice, posX, posY, posZ, leanX, leanZ, intensity, slender = 1, shardIdx) {
       const colorBody = colorChoice.clone();
       // Tint a few shards toward white for high-contrast facets.
       if (rand() < 0.22) colorBody.lerp(cWhite, 0.30);
+      const colorHex = '#' + colorChoice.getHexString();
+      const phaseIndex = shardIdx % 3;
+      const mat = getSharedCrystalMaterial(colorHex, intensity, phaseIndex);
+
       const geo = new THREE.OctahedronGeometry(h * 0.21, 0);
       const baseXZ = (0.44 + rand() * 0.20) * slender;
       geo.scale(baseXZ, 2.0 + rand() * 0.9, baseXZ);
-      const mat = new THREE.MeshStandardMaterial({
-        color: colorBody,
-        emissive: colorChoice,
-        emissiveIntensity: intensity,
-        flatShading: true,
-        roughness: 0.26,
-        metalness: 0.08,
-        transparent: true,
-        opacity: 0.92,
-      });
-      mat.userData.baseIntensity = intensity;
-      crystalMats.push(mat);
       const shard = new THREE.Mesh(geo, mat);
       shard.position.set(posX, posY, posZ);
       shard.rotation.set(leanX, rand() * Math.PI * 2, leanZ);
@@ -761,6 +786,7 @@ export function createScene(canvas) {
       (rand() - 0.5) * (isSpear ? 0.05 : isRose ? 0.08 : 0.12),
       baseIntensity * (isSpear ? 1.18 : isRose ? 1.12 : 1.05),
       isSpear ? 0.72 : isRose ? 0.82 : 1.0,
+      0,
     );
     if (isRose) {
       // Rose-like crystal bloom: layered petals around a bud.
@@ -786,6 +812,7 @@ export function createScene(canvas) {
             -Math.cos(a) * lean,
             baseIntensity * (0.78 + rand() * 0.35),
             0.78,
+            i + layerIdx * count + 1,
           );
         }
       });
@@ -803,6 +830,7 @@ export function createScene(canvas) {
           -Math.cos(a) * 0.7,
           baseIntensity * 0.72,
           0.86,
+          i + 50,
         );
       }
       return g;
@@ -826,11 +854,12 @@ export function createScene(canvas) {
         -Math.cos(angle) * (isSpear ? (0.11 + rand() * 0.20) : (0.18 + rand() * 0.30)) + (rand() - 0.5) * 0.14,
         baseIntensity * (isSpear ? (0.86 + rand() * 0.48) : (0.7 + rand() * 0.45)),
         isSpear ? 0.78 : 1.0,
+        i + 1,
       );
     }
     if (isSpear) {
       // Add two extra rear guard spikes to complete the crystal silhouette.
-      [-0.28, 0.26].forEach((off) => {
+      [-0.28, 0.26].forEach((off, idx) => {
         addShard(
           dominantHeight * (0.62 + rand() * 0.18),
           cPrimary,
@@ -841,6 +870,7 @@ export function createScene(canvas) {
           (off < 0 ? -1 : 1) * (0.1 + rand() * 0.12),
           baseIntensity * 0.95,
           0.74,
+          idx + 80,
         );
       });
     }
@@ -863,9 +893,12 @@ export function createScene(canvas) {
     const pl = new THREE.PointLight(primary, li, 16, 2);
     pl.position.set(wx, wy + h * 0.72, wz);
     scene.add(pl);
-    const plAccent = new THREE.PointLight(accent, li * 0.45, 12, 2);
-    plAccent.position.set(wx + 0.4, wy + h * 0.45, wz - 0.4);
-    scene.add(plAccent);
+    
+    if (!isMobile) {
+      const plAccent = new THREE.PointLight(accent, li * 0.45, 12, 2);
+      plAccent.position.set(wx + 0.4, wy + h * 0.45, wz - 0.4);
+      scene.add(plAccent);
+    }
   });
 
   // Mountain crystals — emerging from the cone face above the altar.
@@ -878,14 +911,21 @@ export function createScene(canvas) {
     { x:  1.0, y: 2.8, z: -221.6, h: 0.50, c: 0xd0a8ff, rx: -0.3, rz:  0.3 },
     { x: -2.1, y: 0.4, z: -221.5, h: 0.40, c: 0x9adcff, rx:  0.1, rz:  0.7 },
     { x:  3.4, y: 1.8, z: -222.2, h: 0.50, c: 0xc4a4ff, rx: -0.4, rz: -0.2 },
-  ].forEach(({ x, y, z, h, c, rx, rz }) => {
-    const mesh = makeCrystal(c, h, 1.9);
+  ].forEach(({ x, y, z, h, c, rx, rz }, idx) => {
+    const colorHex = '#' + new THREE.Color(c).getHexString();
+    const mat = getSharedCrystalMaterial(colorHex, 1.9, idx % 3);
+    const geo = new THREE.OctahedronGeometry(h * 0.5, 0);
+    geo.scale(0.55, 1.8, 0.55);
+    const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(x, y, z);
     mesh.rotation.set(rx, rand() * Math.PI * 2, rz);
     mountains.add(mesh);
-    const pl = new THREE.PointLight(c, 0.45, 5, 2);
-    pl.position.set(x, y, z + 0.3);
-    scene.add(pl);
+    
+    if (!isMobile) {
+      const pl = new THREE.PointLight(c, 0.45, 5, 2);
+      pl.position.set(x, y, z + 0.3);
+      scene.add(pl);
+    }
   });
 
   scene.add(mountains);
@@ -1019,7 +1059,7 @@ export function createScene(canvas) {
   ], 0.5, 0.08, -0.04);
 
   // Falling petals
-  const PETAL_N = 280;
+  const PETAL_N = isMobile ? 100 : 280;
   const petalGeo = new THREE.BufferGeometry();
   const petalPos = new Float32Array(PETAL_N * 3);
   const petalSpeed = new Float32Array(PETAL_N);
@@ -1089,11 +1129,10 @@ export function createScene(canvas) {
     fill.intensity = T.fillInt;
     terrainMat.color.setHex(T.terrainColor);
     roadMat.color.setHex(T.roadColor);
-    stoneGroup.children.forEach((c) => c.material.color.setHex(T.roadColor));
-    mountainMats.forEach((m, i) => m.color.setHex(name === 'dark' ? (i % 2 ? 0x2a2238 : 0x342848) : (i % 2 ? 0x6a3a4a : 0x7a4858)));
-    lanterns.children.forEach((c) => {
-      if (c.userData.isLamp) c.material.emissiveIntensity = T.lampEmissiveInt;
-    });
+    sharedStoneMat.color.setHex(T.roadColor);
+    sharedMtnMatEven.color.setHex(name === 'dark' ? 0x342848 : 0x7a4858);
+    sharedMtnMatOdd.color.setHex(name === 'dark' ? 0x2a2238 : 0x6a3a4a);
+    sharedLampMat.emissiveIntensity = T.lampEmissiveInt;
     stars.material.opacity = T.starOpacity;
     applySkyColors(T.stops);
   }
@@ -1202,15 +1241,14 @@ export function createScene(canvas) {
     // Lamp pulse at night
     if (currentTheme === 'dark') {
       const pulse = 1 + Math.sin(t * 1.3) * 0.15;
-      lanterns.children.forEach((c) => {
-        if (c.userData.isLamp) c.material.emissiveIntensity = themes.dark.lampEmissiveInt * pulse;
-      });
+      sharedLampMat.emissiveIntensity = themes.dark.lampEmissiveInt * pulse;
     }
 
-    // Crystal breathing — each shard pulses on its own slight phase.
-    for (let i = 0; i < crystalMats.length; i++) {
-      const m = crystalMats[i];
-      const p = 1 + Math.sin(t * 1.4 + i * 0.7) * 0.18;
+    // Crystal breathing — breathes in phase-groups rather than individual loops
+    for (let i = 0; i < crystalSharedMats.length; i++) {
+      const m = crystalSharedMats[i];
+      const phase = m.userData.phaseIndex * (Math.PI / 1.5);
+      const p = 1 + Math.sin(t * 1.4 + phase) * 0.18;
       m.emissiveIntensity = m.userData.baseIntensity * p;
     }
 
